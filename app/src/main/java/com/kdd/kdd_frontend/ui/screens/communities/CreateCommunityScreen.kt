@@ -1,0 +1,286 @@
+package com.kdd.kdd_frontend.ui.screens.communities
+
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AddAPhoto
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.unit.dp
+import com.kdd.kdd_frontend.ui.theme.*
+
+@Composable
+fun CreateCommunityScreen(
+    onNavigateBack: () -> Unit,
+    onCommunityCreated: () -> Unit
+) {
+    var titulo by remember { mutableStateOf("") }
+    var edadMin by remember { mutableStateOf("18") }
+    var edadMax by remember { mutableStateOf("99") }
+    var ubicacion by remember { mutableStateOf("") }
+    var descripcion by remember { mutableStateOf("") }
+
+    val formValido = titulo.isNotBlank() && ubicacion.isNotBlank()
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.White)
+    ) {
+        // Barra superior
+        Surface(shadowElevation = 2.dp) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .statusBarsPadding()
+                    .height(56.dp)
+                    .padding(horizontal = 8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                IconButton(onClick = onNavigateBack) {
+                    Icon(Icons.Filled.Close, contentDescription = "Cerrar", tint = KddTextPrimary)
+                }
+                Text(
+                    text = "Crear comunidad",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = KddTextPrimary,
+                    modifier = Modifier.weight(1f)
+                )
+            }
+        }
+
+        // Formulario
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 20.dp, vertical = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(20.dp)
+        ) {
+            // 1. Título
+            CommunityFormField(
+                label = "Nombre de la comunidad",
+                value = titulo,
+                onValueChange = { if (it.length <= 50) titulo = it },
+                placeholder = "Ej: Escalada Sevilla",
+                maxChars = 50
+            )
+
+            // 2. Edad mínima y máxima
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(
+                    text = "Rango de edad",
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.SemiBold,
+                    color = KddTextPrimary
+                )
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    OutlinedTextField(
+                        value = edadMin,
+                        onValueChange = { if (it.length <= 3) edadMin = it.filter { c -> c.isDigit() } },
+                        label = { Text("Edad mínima") },
+                        modifier = Modifier.weight(1f),
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        shape = RoundedCornerShape(10.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = KddPurple,
+                            unfocusedBorderColor = KddDivider
+                        )
+                    )
+                    OutlinedTextField(
+                        value = edadMax,
+                        onValueChange = { if (it.length <= 3) edadMax = it.filter { c -> c.isDigit() } },
+                        label = { Text("Edad máxima") },
+                        modifier = Modifier.weight(1f),
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        shape = RoundedCornerShape(10.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = KddPurple,
+                            unfocusedBorderColor = KddDivider
+                        )
+                    )
+                }
+            }
+
+            // 3. Ubicación
+            CommunityFormField(
+                label = "Ubicación",
+                value = ubicacion,
+                onValueChange = { if (it.length <= 60) ubicacion = it },
+                placeholder = "Ciudad o pueblo",
+                maxChars = 60
+            )
+
+            // 4. Descripción
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(
+                        text = "Descripción",
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = FontWeight.SemiBold,
+                        color = KddTextPrimary
+                    )
+                    Text(
+                        text = "${descripcion.length}/300",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = KddTextHint
+                    )
+                }
+                OutlinedTextField(
+                    value = descripcion,
+                    onValueChange = { if (it.length <= 300) descripcion = it },
+                    placeholder = { Text("Describe tu comunidad...", color = KddTextHint) },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(120.dp),
+                    shape = RoundedCornerShape(10.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = KddPurple,
+                        unfocusedBorderColor = KddDivider
+                    )
+                )
+            }
+
+            // 5. Añadir foto
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(
+                    text = "Foto de la comunidad",
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.SemiBold,
+                    color = KddTextPrimary
+                )
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(140.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(KddSurface)
+                        .border(1.dp, KddDivider, RoundedCornerShape(12.dp)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(48.dp)
+                                .clip(CircleShape)
+                                .background(KddPurple.copy(alpha = 0.1f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                Icons.Filled.AddAPhoto,
+                                contentDescription = null,
+                                tint = KddPurple,
+                                modifier = Modifier.size(24.dp)
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = "Añadir foto",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = KddPurple,
+                            fontWeight = FontWeight.Medium
+                        )
+                        Text(
+                            text = "Toca para seleccionar",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = KddTextHint
+                        )
+                    }
+                }
+            }
+        }
+
+        // Botón Terminar
+        Surface(shadowElevation = 4.dp) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .navigationBarsPadding()
+                    .padding(horizontal = 20.dp, vertical = 12.dp)
+            ) {
+                Button(
+                    onClick = onCommunityCreated,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(52.dp),
+                    shape = RoundedCornerShape(26.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = if (formValido) KddYellow else KddDivider,
+                        contentColor = if (formValido) Color.Black else KddTextHint
+                    ),
+                    enabled = formValido
+                ) {
+                    Text(
+                        text = "Terminar",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun CommunityFormField(
+    label: String,
+    value: String,
+    onValueChange: (String) -> Unit,
+    placeholder: String,
+    maxChars: Int
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.SemiBold,
+                color = KddTextPrimary
+            )
+            Text(
+                text = "${value.length}/$maxChars",
+                style = MaterialTheme.typography.labelSmall,
+                color = KddTextHint
+            )
+        }
+        OutlinedTextField(
+            value = value,
+            onValueChange = onValueChange,
+            placeholder = { Text(placeholder, color = KddTextHint) },
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true,
+            shape = RoundedCornerShape(10.dp),
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedBorderColor = KddPurple,
+                unfocusedBorderColor = KddDivider
+            )
+        )
+    }
+}
