@@ -17,6 +17,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.kdd.kdd_frontend.ui.theme.*
 
 @Composable
@@ -93,6 +94,36 @@ fun AccountScreen(
                         style = MaterialTheme.typography.bodySmall,
                         color = KddTextSecondary
                     )
+                    Spacer(modifier = Modifier.height(6.dp))
+                    // Valoración media — TODO: obtener del backend
+                    val valoracionMedia = 4.2f // ejemplo
+                    val numValoraciones = 7
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+                        (1..5).forEach { i ->
+                            Icon(
+                                imageVector = when {
+                                    i <= valoracionMedia.toInt() -> Icons.Filled.Star
+                                    i - valoracionMedia < 1f -> Icons.Filled.StarHalf
+                                    else -> Icons.Filled.StarBorder
+                            },
+                                contentDescription = null,
+                                tint = KddYellow,
+                                modifier = Modifier.size(16.dp)
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = "%.1f".format(valoracionMedia),
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            color = KddTextPrimary
+                        )
+                        Text(
+                            text = "($numValoraciones)",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = KddTextHint
+                        )
+                    }
                     Spacer(modifier = Modifier.height(4.dp))
                     Surface(
                         shape = RoundedCornerShape(6.dp),

@@ -27,6 +27,12 @@ import java.time.LocalDate
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 
+val CATEGORIAS_PREDEFINIDAS = listOf(
+    "Deportes", "Naturaleza", "Fiesta", "Música", "Arte y Cultura",
+    "Gastronomía", "Viajes", "Tecnología", "Cine y Series", "Fotografía",
+    "Juegos", "Lectura", "Idiomas", "Voluntariado", "Personalizada"
+)
+
 val EU_LANGUAGES = listOf(
     "Español", "Inglés", "Francés", "Alemán", "Italiano",
     "Portugués", "Neerlandés", "Polaco", "Rumano", "Sueco",
@@ -42,6 +48,7 @@ fun CreatePlanScreen(
 ) {
     var titulo by remember { mutableStateOf("") }
     var categoria by remember { mutableStateOf("") }
+    var categoriaPersonalizada by remember { mutableStateOf("") }
     var descripcion by remember { mutableStateOf("") }
     var vasAcompanado by remember { mutableFloatStateOf(1f) }
     var maxAcompanantes by remember { mutableFloatStateOf(5f) }
@@ -62,6 +69,7 @@ fun CreatePlanScreen(
     var showDateHastaDialog by remember { mutableStateOf(false) }
     var showTimeHastaDialog by remember { mutableStateOf(false) }
     var showIdiomasDialog by remember { mutableStateOf(false) }
+    var showCategoriasDialog by remember { mutableStateOf(false) }
 
     val dateFormatter = DateTimeFormatter.ofPattern("dd/MM/yy")
     val timeFormatter = DateTimeFormatter.ofPattern("HH:mm")
@@ -85,7 +93,39 @@ fun CreatePlanScreen(
             verticalArrangement = Arrangement.spacedBy(20.dp)
         ) {
             FormField(label = "Título", maxChars = 25, value = titulo, onValueChange = { if (it.length <= 25) titulo = it }, placeholder = "¿Cómo se llama tu actividad?")
-            FormField(label = "Categoría", maxChars = 25, value = categoria, onValueChange = { if (it.length <= 25) categoria = it }, placeholder = "Deporte, juegos de mesa...")
+
+            // Selector de categoría
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("Categoría", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, color = KddTextPrimary)
+                OutlinedButton(
+                    onClick = { showCategoriasDialog = true },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(10.dp),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = if (categoria.isNotBlank()) KddPurple else KddTextHint),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, if (categoria.isNotBlank()) KddPurple else KddDivider)
+                ) {
+                    Icon(Icons.Filled.Category, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        if (categoria.isBlank()) "Selecciona una categoría" else categoria,
+                        modifier = Modifier.weight(1f)
+                    )
+                    Icon(Icons.Filled.KeyboardArrowDown, contentDescription = null, modifier = Modifier.size(16.dp))
+                }
+                if (categoria == "Personalizada") {
+                    OutlinedTextField(
+                        value = categoriaPersonalizada,
+                        onValueChange = { if (it.length <= 20) categoriaPersonalizada = it },
+                        placeholder = { Text("Escribe tu categoría...", color = KddTextHint) },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        shape = RoundedCornerShape(10.dp),
+                        colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = KddPurple, unfocusedBorderColor = KddDivider),
+                        supportingText = { Text("${categoriaPersonalizada.length}/20", color = KddTextHint) }
+                    )
+                }
+            }
+
             FormField(label = "Descripción", maxChars = 300, value = descripcion, onValueChange = { if (it.length <= 300) descripcion = it }, placeholder = "Describe a qué invitas a los amigos", singleLine = false, minLines = 3)
 
             // ¿Cuándo?
@@ -247,7 +287,8 @@ fun CreatePlanScreen(
                 modifier = Modifier.fillMaxWidth().height(52.dp),
                 shape = RoundedCornerShape(26.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = KddPurple),
-                enabled = titulo.isNotBlank() && categoria.isNotBlank()
+                enabled = titulo.isNotBlank() && categoria.isNotBlank() &&
+                        (categoria != "Personalizada" || categoriaPersonalizada.isNotBlank())
             ) {
                 Text("Terminar", color = Color.White, fontWeight = FontWeight.SemiBold, fontSize = 16.sp)
             }
@@ -310,6 +351,46 @@ fun CreatePlanScreen(
                 showTimeHastaDialog = false
             }
         ) { TimePicker(state = timeState) }
+    }
+
+    // ─── Dialog: Categorías ───
+    if (showCategoriasDialog) {
+        Dialog(onDismissRequest = { showCategoriasDialog = false }) {
+            Card(shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
+                Column(modifier = Modifier.padding(20.dp)) {
+                    Text("Elige una categoría", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = KddTextPrimary)
+                    Spacer(modifier = Modifier.height(12.dp))
+                    LazyColumn(modifier = Modifier.heightIn(max = 360.dp)) {
+                        items(CATEGORIAS_PREDEFINIDAS) { cat ->
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable {
+                                        categoria = cat
+                                        if (cat != "Personalizada") categoriaPersonalizada = ""
+                                        showCategoriasDialog = false
+                                    }
+                                    .padding(vertical = 10.dp, horizontal = 4.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Text(cat, style = MaterialTheme.typography.bodyMedium, color = KddTextPrimary)
+                                if (categoria == cat) {
+                                    Icon(Icons.Filled.Check, contentDescription = null, tint = KddPurple, modifier = Modifier.size(18.dp))
+                                }
+                            }
+                            if (cat != CATEGORIAS_PREDEFINIDAS.last()) {
+                                HorizontalDivider(color = KddDivider)
+                            }
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(8.dp))
+                    TextButton(onClick = { showCategoriasDialog = false }, modifier = Modifier.align(Alignment.End)) {
+                        Text("Cancelar", color = KddTextSecondary)
+                    }
+                }
+            }
+        }
     }
 
     // ─── Dialog: Idiomas ───

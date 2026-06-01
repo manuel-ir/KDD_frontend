@@ -2,15 +2,17 @@ package com.kdd.kdd_frontend.ui.screens.communities
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AddAPhoto
-import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -20,6 +22,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
+import com.kdd.kdd_frontend.ui.screens.plan.CATEGORIAS_PREDEFINIDAS
 import com.kdd.kdd_frontend.ui.theme.*
 
 @Composable
@@ -28,12 +32,16 @@ fun CreateCommunityScreen(
     onCommunityCreated: () -> Unit
 ) {
     var titulo by remember { mutableStateOf("") }
+    var categoria by remember { mutableStateOf("") }
+    var categoriaPersonalizada by remember { mutableStateOf("") }
     var edadMin by remember { mutableStateOf("18") }
     var edadMax by remember { mutableStateOf("99") }
     var ubicacion by remember { mutableStateOf("") }
     var descripcion by remember { mutableStateOf("") }
+    var showCategoriasDialog by remember { mutableStateOf(false) }
 
-    val formValido = titulo.isNotBlank() && ubicacion.isNotBlank()
+    val formValido = titulo.isNotBlank() && ubicacion.isNotBlank() &&
+            categoria.isNotBlank() && (categoria != "Personalizada" || categoriaPersonalizada.isNotBlank())
 
     Column(
         modifier = Modifier
@@ -74,13 +82,46 @@ fun CreateCommunityScreen(
             // 1. Título
             CommunityFormField(
                 label = "Nombre de la comunidad",
+
                 value = titulo,
                 onValueChange = { if (it.length <= 50) titulo = it },
                 placeholder = "Ej: Escalada Sevilla",
                 maxChars = 50
             )
 
-            // 2. Edad mínima y máxima
+            // 2. Categoría
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("Categoría", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold, color = KddTextPrimary)
+                OutlinedButton(
+                    onClick = { showCategoriasDialog = true },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(10.dp),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = if (categoria.isNotBlank()) KddPurple else KddTextHint),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, if (categoria.isNotBlank()) KddPurple else KddDivider)
+                ) {
+                    Icon(Icons.Filled.Category, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        if (categoria.isBlank()) "Selecciona una categoría" else categoria,
+                        modifier = Modifier.weight(1f)
+                    )
+                    Icon(Icons.Filled.KeyboardArrowDown, contentDescription = null, modifier = Modifier.size(16.dp))
+                }
+                if (categoria == "Personalizada") {
+                    OutlinedTextField(
+                        value = categoriaPersonalizada,
+                        onValueChange = { if (it.length <= 20) categoriaPersonalizada = it },
+                        placeholder = { Text("Escribe tu categoría...", color = KddTextHint) },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        shape = RoundedCornerShape(10.dp),
+                        colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = KddPurple, unfocusedBorderColor = KddDivider),
+                        supportingText = { Text("${categoriaPersonalizada.length}/20", color = KddTextHint) }
+                    )
+                }
+            }
+
+            // 3. Edad mínima y máxima
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(
                     text = "Rango de edad",
@@ -120,7 +161,7 @@ fun CreateCommunityScreen(
                 }
             }
 
-            // 3. Ubicación
+            // 4. Ubicación
             CommunityFormField(
                 label = "Ubicación",
                 value = ubicacion,
@@ -129,7 +170,7 @@ fun CreateCommunityScreen(
                 maxChars = 60
             )
 
-            // 4. Descripción
+            // 5. Descripción
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -162,7 +203,7 @@ fun CreateCommunityScreen(
                 )
             }
 
-            // 5. Añadir foto
+            // 6. Añadir foto
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(
                     text = "Foto de la comunidad",
@@ -239,6 +280,46 @@ fun CreateCommunityScreen(
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.SemiBold
                     )
+                }
+            }
+        }
+    }
+
+    // ─── Dialog: Categorías ───
+    if (showCategoriasDialog) {
+        Dialog(onDismissRequest = { showCategoriasDialog = false }) {
+            Card(shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
+                Column(modifier = Modifier.padding(20.dp)) {
+                    Text("Elige una categoría", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = KddTextPrimary)
+                    Spacer(modifier = Modifier.height(12.dp))
+                    LazyColumn(modifier = Modifier.heightIn(max = 360.dp)) {
+                        items(CATEGORIAS_PREDEFINIDAS) { cat ->
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable {
+                                        categoria = cat
+                                        if (cat != "Personalizada") categoriaPersonalizada = ""
+                                        showCategoriasDialog = false
+                                    }
+                                    .padding(vertical = 10.dp, horizontal = 4.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Text(cat, style = MaterialTheme.typography.bodyMedium, color = KddTextPrimary)
+                                if (categoria == cat) {
+                                    Icon(Icons.Filled.Check, contentDescription = null, tint = KddPurple, modifier = Modifier.size(18.dp))
+                                }
+                            }
+                            if (cat != CATEGORIAS_PREDEFINIDAS.last()) {
+                                HorizontalDivider(color = KddDivider)
+                            }
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(8.dp))
+                    TextButton(onClick = { showCategoriasDialog = false }, modifier = Modifier.align(Alignment.End)) {
+                        Text("Cancelar", color = KddTextSecondary)
+                    }
                 }
             }
         }
