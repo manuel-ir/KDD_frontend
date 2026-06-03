@@ -14,8 +14,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.kdd.kdd_frontend.ui.components.*
 import com.kdd.kdd_frontend.ui.theme.*
+import com.kdd.kdd_frontend.viewmodel.PlanViewModel
+import com.kdd.kdd_frontend.viewmodel.PlanesState
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -32,31 +35,8 @@ fun ExploreScreen(
     var filtroActivo by remember { mutableStateOf<String?>(null) }
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     var showBottomSheet by remember { mutableStateOf(false) }
-
-    // Datos de ejemplo
-    val planes = listOf(
-        PlanCardData(
-            id = 1L,
-            titulo = "Feria de abril",
-            categoria = "Fiesta",
-            descripcion = "Grupito para ir a bailar a las casetas",
-            dia = "mañana",
-            hora = "19:00",
-            distanciaKm = "30km",
-            anfitrionNombre = "Manuel"
-        ),
-        PlanCardData(
-            id = 2L,
-            titulo = "Sendero Vía Verde",
-            categoria = "Senderismo",
-            descripcion = "Ruta de 10km por la ribera del embalse",
-            dia = "viernes",
-            hora = "18:00",
-            distanciaKm = "50km",
-            ubicacion = "San Nicolás del Puerto",
-            anfitrionNombre = "Ismael"
-        )
-    )
+    val planViewModel: PlanViewModel = viewModel()
+    val planesState by planViewModel.planesState.collectAsState()
 
     Scaffold(
         bottomBar = {
@@ -131,12 +111,31 @@ fun ExploreScreen(
             Spacer(modifier = Modifier.height(8.dp))
 
             // Lista de planes
-            LazyColumn {
-                items(planes) { plan ->
-                    PlanCard(
-                        data = plan,
-                        onClick = { onNavigateToPlan(plan.id) }
-                    )
+            when (val state = planesState) {
+                is PlanesState.Loading -> {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator(color = KddPurple)
+                    }
+                }
+                is PlanesState.Error -> {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                            Text(state.mensaje, color = KddTextSecondary)
+                            Button(onClick = { planViewModel.cargarPlanes() }, colors = ButtonDefaults.buttonColors(containerColor = KddPurple)) {
+                                Text("Reintentar", color = Color.White)
+                            }
+                        }
+                    }
+                }
+                is PlanesState.Success -> {
+                    LazyColumn {
+                        items(state.planes) { plan ->
+                            PlanCard(
+                                data = plan,
+                                onClick = { onNavigateToPlan(plan.id) }
+                            )
+                        }
+                    }
                 }
             }
         }

@@ -2,6 +2,7 @@ package com.kdd.kdd_frontend.network
 
 import com.kdd.kdd_frontend.network.dto.AuthResponse
 import com.kdd.kdd_frontend.network.dto.GoogleAuthRequest
+import com.kdd.kdd_frontend.network.dto.PlanDto
 import retrofit2.Response
 import retrofit2.http.*
 
@@ -23,16 +24,16 @@ interface ApiService {
 
     // Planes
     @GET("api/planes")
-    suspend fun getPlanes(): Response<List<Map<String, Any>>>
+    suspend fun getPlanes(): Response<List<PlanDto>>
 
     @GET("api/planes/mis-planes")
-    suspend fun getMisPlanes(): Response<List<Map<String, Any>>>
+    suspend fun getMisPlanes(): Response<List<PlanDto>>
 
     @GET("api/planes/{id}")
-    suspend fun getPlan(@Path("id") id: Long): Response<Map<String, Any>>
+    suspend fun getPlan(@Path("id") id: Long): Response<PlanDto>
 
     @POST("api/planes")
-    suspend fun crearPlan(@Body body: Map<String, Any>): Response<Map<String, Any>>
+    suspend fun crearPlan(@Body body: Map<String, Any>): Response<PlanDto>
 
     @POST("api/planes/{id}/unirse")
     suspend fun unirseAPlan(@Path("id") id: Long): Response<Void>
