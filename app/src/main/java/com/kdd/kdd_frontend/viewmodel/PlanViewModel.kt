@@ -30,11 +30,31 @@ class PlanViewModel : ViewModel() {
     private val _detalleState = MutableStateFlow<PlanDetalleState>(PlanDetalleState.Loading)
     val detalleState: StateFlow<PlanDetalleState> = _detalleState
 
+    private val _misPlanes = MutableStateFlow<PlanesState>(PlanesState.Loading)
+    val misPlanes: StateFlow<PlanesState> = _misPlanes
+
     private val _participando = MutableStateFlow(false)
     val participando: StateFlow<Boolean> = _participando
 
     init {
         cargarPlanes()
+    }
+
+    fun cargarMisPlanes() {
+        viewModelScope.launch {
+            _misPlanes.value = PlanesState.Loading
+            try {
+                val response = ApiClient.api.getMisPlanes()
+                if (response.isSuccessful) {
+                    val planes = response.body()?.map { it.toPlanCardData() } ?: emptyList()
+                    _misPlanes.value = PlanesState.Success(planes)
+                } else {
+                    _misPlanes.value = PlanesState.Error("Error ${response.code()}")
+                }
+            } catch (e: Exception) {
+                _misPlanes.value = PlanesState.Error("No se pudo conectar con el servidor")
+            }
+        }
     }
 
     fun cargarPlanes() {

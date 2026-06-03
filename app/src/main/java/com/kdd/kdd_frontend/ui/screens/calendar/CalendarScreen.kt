@@ -11,8 +11,11 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.kdd.kdd_frontend.ui.components.*
 import com.kdd.kdd_frontend.ui.theme.*
+import com.kdd.kdd_frontend.viewmodel.PlanViewModel
+import com.kdd.kdd_frontend.viewmodel.PlanesState
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -24,14 +27,17 @@ fun CalendarScreen(
     onNavigateToCreateCommunity: () -> Unit,
     onNavigateToPlan: (Long) -> Unit
 ) {
-    // Tabs: Próximos y Favoritos
     var selectedTab by remember { mutableIntStateOf(0) }
     val tabs = listOf("Próximos", "Favoritos")
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     var showBottomSheet by remember { mutableStateOf(false) }
 
-    // Datos de ejemplo
-    val misPlanes = listOf<PlanCardData>() // vacío para mostrar estado empty
+    val viewModel: PlanViewModel = viewModel()
+    val misPlanes by viewModel.misPlanes.collectAsState()
+
+    LaunchedEffect(Unit) {
+        viewModel.cargarMisPlanes()
+    }
 
     Scaffold(
         bottomBar = {
@@ -59,7 +65,6 @@ fun CalendarScreen(
 
             HorizontalDivider()
 
-            // Tabs
             TabRow(
                 selectedTabIndex = selectedTab,
                 containerColor = Color.White,
@@ -79,39 +84,50 @@ fun CalendarScreen(
                 }
             }
 
-            if (misPlanes.isEmpty()) {
-                // Estado vacío
-                Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .fillMaxWidth(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        Text(
-                            text = "Aquí no hay planes por el momento.\nCrea tu actividad",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = KddTextHint,
-                            textAlign = TextAlign.Center
-                        )
-                        Button(
-                            onClick = onNavigateToCreatePlan,
-                            colors = ButtonDefaults.buttonColors(containerColor = KddPurple)
-                        ) {
-                            Text("Crear actividad", color = Color.White)
-                        }
+            when (val state = misPlanes) {
+                is PlanesState.Loading -> {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator(color = KddPurple)
                     }
                 }
-            } else {
-                LazyColumn {
-                    items(misPlanes) { plan ->
-                        PlanCard(
-                            data = plan,
-                            onClick = { onNavigateToPlan(plan.id) }
-                        )
+                is PlanesState.Error -> {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Text(state.mensaje, color = KddTextSecondary)
+                    }
+                }
+                is PlanesState.Success -> {
+                    if (state.planes.isEmpty()) {
+                        Box(
+                            modifier = Modifier.weight(1f).fillMaxWidth(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                Text(
+                                    text = "Aquí no hay planes por el momento.\nCrea tu actividad",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = KddTextHint,
+                                    textAlign = TextAlign.Center
+                                )
+                                Button(
+                                    onClick = onNavigateToCreatePlan,
+                                    colors = ButtonDefaults.buttonColors(containerColor = KddPurple)
+                                ) {
+                                    Text("Crear actividad", color = Color.White)
+                                }
+                            }
+                        }
+                    } else {
+                        LazyColumn {
+                            items(state.planes) { plan ->
+                                PlanCard(
+                                    data = plan,
+                                    onClick = { onNavigateToPlan(plan.id) }
+                                )
+                            }
+                        }
                     }
                 }
             }
