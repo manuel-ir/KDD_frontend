@@ -91,14 +91,6 @@ fun PlanDetailScreen(
                     ) {
                         Text("Unirse", color = Color.White, fontWeight = FontWeight.SemiBold)
                     }
-                    OutlinedButton(
-                        onClick = { /* TODO */ },
-                        modifier = Modifier.height(48.dp),
-                        shape = RoundedCornerShape(24.dp),
-                        colors = ButtonDefaults.outlinedButtonColors(contentColor = KddPurple)
-                    ) {
-                        Text("+1", fontWeight = FontWeight.SemiBold)
-                    }
                 }
             }
         }
