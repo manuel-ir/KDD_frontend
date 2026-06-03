@@ -19,9 +19,12 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.kdd.kdd_frontend.ui.components.*
 import com.kdd.kdd_frontend.ui.theme.*
+import com.kdd.kdd_frontend.viewmodel.ComunidadDetalleState
+import com.kdd.kdd_frontend.viewmodel.ComunidadViewModel
 
 @Composable
 fun CommunityDetailScreen(
@@ -29,189 +32,211 @@ fun CommunityDetailScreen(
     onNavigateBack: () -> Unit,
     onNavigateToPlan: (Long) -> Unit
 ) {
+    val viewModel: ComunidadViewModel = viewModel()
+    val detalleState by viewModel.detalleState.collectAsState()
+
     var selectedTab by remember { mutableIntStateOf(0) }
     val tabs = listOf("Información", "Actividades", "Miembros")
+    var unidoExitoso by remember { mutableStateOf(false) }
+    val snackbarHostState = remember { SnackbarHostState() }
 
-    // Datos de ejemplo
-    val comunidad = CommunityCardData(
-        id = communityId,
-        nombre = "Escalada SEV",
-        edadMin = 18,
-        edadMax = 55,
-        ubicacion = "Sevilla",
-        numMiembros = 50,
-        adminNombre = "Juan"
-    )
-
-    val actividades = listOf(
-        PlanCardData(
-            id = 1L,
-            titulo = "Rock&Wall",
-            categoria = "Escalada",
-            descripcion = "Sesión de escalada en rocódromo",
-            dia = "sábado",
-            hora = "10:00",
-            distanciaKm = "5km",
-            anfitrionNombre = "Juan"
-        )
-    )
+    LaunchedEffect(communityId) {
+        viewModel.cargarDetalle(communityId)
+    }
 
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         bottomBar = {
-            Surface(shadowElevation = 8.dp) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .navigationBarsPadding()
-                        .padding(horizontal = 16.dp, vertical = 12.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    IconButton(
-                        onClick = { /* TODO: compartir */ },
+            if (detalleState is ComunidadDetalleState.Success) {
+                Surface(shadowElevation = 8.dp) {
+                    Row(
                         modifier = Modifier
-                            .size(44.dp)
-                            .clip(CircleShape)
-                            .background(KddSurface)
+                            .fillMaxWidth()
+                            .navigationBarsPadding()
+                            .padding(horizontal = 16.dp, vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        Icon(Icons.Filled.Share, contentDescription = "Compartir", tint = KddTextPrimary)
-                    }
-                    Button(
-                        onClick = { /* TODO: unirse */ },
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(48.dp),
-                        shape = RoundedCornerShape(24.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = KddPurple)
-                    ) {
-                        Text("Unirse", color = Color.White, fontWeight = FontWeight.SemiBold)
+                        IconButton(
+                            onClick = { },
+                            modifier = Modifier
+                                .size(44.dp)
+                                .clip(CircleShape)
+                                .background(KddSurface)
+                        ) {
+                            Icon(Icons.Filled.Share, contentDescription = "Compartir", tint = KddTextPrimary)
+                        }
+                        Button(
+                            onClick = {
+                                if (!unidoExitoso) {
+                                    viewModel.unirseAComunidad(
+                                        id = communityId,
+                                        onSuccess = { unidoExitoso = true },
+                                        onError = { }
+                                    )
+                                }
+                            },
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(48.dp),
+                            shape = RoundedCornerShape(24.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = if (unidoExitoso) KddTextHint else KddPurple
+                            )
+                        ) {
+                            Text(
+                                text = if (unidoExitoso) "Solicitud enviada" else "Unirse",
+                                color = Color.White,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        }
                     }
                 }
             }
         }
     ) { paddingValues ->
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-        ) {
-            item {
-                // Foto de la comunidad con overlay
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(240.dp)
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .background(KddSurfaceVariant)
-                    )
-
-                    // X para cerrar
-                    IconButton(
-                        onClick = onNavigateBack,
-                        modifier = Modifier
-                            .align(Alignment.TopStart)
-                            .padding(8.dp)
-                            .statusBarsPadding()
-                            .size(36.dp)
-                            .clip(CircleShape)
-                            .background(Color.White.copy(alpha = 0.8f))
-                    ) {
-                        Icon(Icons.Filled.Close, contentDescription = "Cerrar", tint = KddTextPrimary)
-                    }
-
-                    // Nombre y tipo
-                    Column(
-                        modifier = Modifier
-                            .align(Alignment.BottomStart)
-                            .padding(16.dp)
-                    ) {
-                        Text(
-                            text = comunidad.nombre,
-                            style = MaterialTheme.typography.headlineMedium,
-                            color = Color.White,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Text(
-                            text = "Comunidad",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = Color.White.copy(alpha = 0.85f)
-                        )
-                    }
-                }
-
-                // Tabs
-                TabRow(
-                    selectedTabIndex = selectedTab,
-                    containerColor = Color.White,
-                    contentColor = KddTextPrimary
-                ) {
-                    tabs.forEachIndexed { index, title ->
-                        Tab(
-                            selected = selectedTab == index,
-                            onClick = { selectedTab = index },
-                            text = {
-                                Text(
-                                    text = title,
-                                    fontWeight = if (selectedTab == index) FontWeight.Bold else FontWeight.Normal
-                                )
-                            }
-                        )
-                    }
+        when (val estado = detalleState) {
+            is ComunidadDetalleState.Loading -> {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator(color = KddPurple)
                 }
             }
-
-            when (selectedTab) {
-                0 -> {
-                    // Información
+            is ComunidadDetalleState.Error -> {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text(estado.mensaje, style = MaterialTheme.typography.bodyMedium, color = KddTextSecondary)
+                }
+            }
+            is ComunidadDetalleState.Success -> {
+                val comunidad = estado.comunidad
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(paddingValues)
+                ) {
                     item {
-                        Column(
-                            modifier = Modifier.padding(16.dp),
-                            verticalArrangement = Arrangement.spacedBy(16.dp)
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(240.dp)
                         ) {
-                            Text(
-                                text = "Toda persona es bienvenida independientemente de su nivel.\nEstamos aquí para organizar eventos en rocódromos o vías ferrata",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = KddTextSecondary
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .background(KddSurfaceVariant)
                             )
 
-                            CommunityInfoRow(
-                                icon = Icons.Filled.Person,
-                                label = "Admin",
-                                value = comunidad.adminNombre
-                            )
-                            CommunityInfoRow(
-                                icon = Icons.Filled.Group,
-                                label = "Miembros",
-                                value = comunidad.numMiembros.toString()
-                            )
-                            CommunityInfoRow(
-                                icon = Icons.Filled.LocationOn,
-                                label = "Lugar",
-                                value = comunidad.ubicacion
-                            )
-                            CommunityInfoRow(
-                                icon = Icons.Filled.CalendarMonth,
-                                label = "Próxima actividad",
-                                value = "Rock&Wall"
-                            )
+                            IconButton(
+                                onClick = onNavigateBack,
+                                modifier = Modifier
+                                    .align(Alignment.TopStart)
+                                    .padding(8.dp)
+                                    .statusBarsPadding()
+                                    .size(36.dp)
+                                    .clip(CircleShape)
+                                    .background(Color.White.copy(alpha = 0.8f))
+                            ) {
+                                Icon(Icons.Filled.Close, contentDescription = "Cerrar", tint = KddTextPrimary)
+                            }
+
+                            Column(
+                                modifier = Modifier
+                                    .align(Alignment.BottomStart)
+                                    .padding(16.dp)
+                            ) {
+                                Text(
+                                    text = comunidad.nombre,
+                                    style = MaterialTheme.typography.headlineMedium,
+                                    color = Color.White,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Text(
+                                    text = "Comunidad",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = Color.White.copy(alpha = 0.85f)
+                                )
+                            }
+                        }
+
+                        TabRow(
+                            selectedTabIndex = selectedTab,
+                            containerColor = Color.White,
+                            contentColor = KddTextPrimary
+                        ) {
+                            tabs.forEachIndexed { index, title ->
+                                Tab(
+                                    selected = selectedTab == index,
+                                    onClick = { selectedTab = index },
+                                    text = {
+                                        Text(
+                                            text = title,
+                                            fontWeight = if (selectedTab == index) FontWeight.Bold else FontWeight.Normal
+                                        )
+                                    }
+                                )
+                            }
                         }
                     }
-                }
-                1 -> {
-                    // Actividades
-                    items(actividades) { plan ->
-                        PlanCard(data = plan, onClick = { onNavigateToPlan(plan.id) })
-                    }
-                }
-                2 -> {
-                    // Miembros
-                    items(List(50) { index ->
-                        Pair("Miembro ${index + 1}", (3.5f + (index % 5) * 0.3f).coerceAtMost(5f))
-                    }) { (nombre, puntuacion) ->
-                        MemberRow(nombre = nombre, puntuacion = puntuacion)
+
+                    when (selectedTab) {
+                        0 -> {
+                            item {
+                                Column(
+                                    modifier = Modifier.padding(16.dp),
+                                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                                ) {
+                                    if (!comunidad.descripcion.isNullOrBlank()) {
+                                        Text(
+                                            text = comunidad.descripcion,
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            color = KddTextSecondary
+                                        )
+                                    }
+                                    if (!comunidad.adminNombre.isNullOrBlank()) {
+                                        CommunityInfoRow(
+                                            icon = Icons.Filled.Person,
+                                            label = "Admin",
+                                            value = comunidad.adminNombre
+                                        )
+                                    }
+                                    CommunityInfoRow(
+                                        icon = Icons.Filled.Group,
+                                        label = "Miembros",
+                                        value = comunidad.numMiembros.toString()
+                                    )
+                                    if (comunidad.edadMin != null && comunidad.edadMax != null) {
+                                        CommunityInfoRow(
+                                            icon = Icons.Filled.People,
+                                            label = "Edad",
+                                            value = "${comunidad.edadMin} - ${comunidad.edadMax} años"
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                        1 -> {
+                            item {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(32.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text("Sin actividades todavía", style = MaterialTheme.typography.bodyMedium, color = KddTextSecondary)
+                                }
+                            }
+                        }
+                        2 -> {
+                            item {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(32.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text("${comunidad.numMiembros} miembros", style = MaterialTheme.typography.bodyMedium, color = KddTextSecondary)
+                                }
+                            }
+                        }
                     }
                 }
             }

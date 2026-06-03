@@ -21,14 +21,18 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.kdd.kdd_frontend.ui.screens.plan.CATEGORIAS_PREDEFINIDAS
 import com.kdd.kdd_frontend.ui.theme.*
+import com.kdd.kdd_frontend.viewmodel.ComunidadViewModel
 
 @Composable
 fun CreateCommunityScreen(
     onNavigateBack: () -> Unit,
     onCommunityCreated: () -> Unit
 ) {
+    val viewModel: ComunidadViewModel = viewModel()
+
     var titulo by remember { mutableStateOf("") }
     var categoria by remember { mutableStateOf("") }
     var categoriaPersonalizada by remember { mutableStateOf("") }
@@ -37,6 +41,7 @@ fun CreateCommunityScreen(
     var ubicacion by remember { mutableStateOf("") }
     var descripcion by remember { mutableStateOf("") }
     var showCategoriasDialog by remember { mutableStateOf(false) }
+    var cargando by remember { mutableStateOf(false) }
 
     val formValido = titulo.isNotBlank() && ubicacion.isNotBlank() &&
             categoria.isNotBlank() && (categoria != "Personalizada" || categoriaPersonalizada.isNotBlank())
@@ -240,22 +245,40 @@ fun CreateCommunityScreen(
                     .padding(horizontal = 20.dp, vertical = 12.dp)
             ) {
                 Button(
-                    onClick = onCommunityCreated,
+                    onClick = {
+                        if (formValido && !cargando) {
+                            cargando = true
+                            val nombreFinal = titulo.trim()
+                            val descripcionFinal = descripcion.trim()
+                            viewModel.crearComunidad(
+                                nombre = nombreFinal,
+                                descripcion = descripcionFinal,
+                                edadMin = edadMin.toInt(),
+                                edadMax = edadMax.toInt(),
+                                onSuccess = { onCommunityCreated() },
+                                onError = { cargando = false }
+                            )
+                        }
+                    },
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(52.dp),
                     shape = RoundedCornerShape(26.dp),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = if (formValido) KddYellow else KddDivider,
-                        contentColor = if (formValido) Color.Black else KddTextHint
+                        containerColor = if (formValido && !cargando) KddYellow else KddDivider,
+                        contentColor = if (formValido && !cargando) Color.Black else KddTextHint
                     ),
-                    enabled = formValido
+                    enabled = formValido && !cargando
                 ) {
-                    Text(
-                        text = "Terminar",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold
-                    )
+                    if (cargando) {
+                        CircularProgressIndicator(modifier = Modifier.size(20.dp), color = Color.Black, strokeWidth = 2.dp)
+                    } else {
+                        Text(
+                            text = "Terminar",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
                 }
             }
         }
