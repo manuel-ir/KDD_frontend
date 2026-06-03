@@ -164,7 +164,12 @@ fun NavGraph(navController: NavHostController) {
         composable(Screen.Account.route) {
             AccountScreen(
                 onNavigateBack = { navController.popBackStack() },
-                onNavigateToEditProfile = { navController.navigate(Screen.EditProfile.route) }
+                onNavigateToEditProfile = { navController.navigate(Screen.EditProfile.route) },
+                onLogout = {
+                    navController.navigate(Screen.Login.route) {
+                        popUpTo(0) { inclusive = true }
+                    }
+                }
             )
         }
         composable(Screen.EditProfile.route) {

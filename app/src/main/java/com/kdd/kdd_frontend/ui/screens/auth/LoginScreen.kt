@@ -148,14 +148,14 @@ fun LoginScreen(
                 OutlinedTextField(
                     value = email,
                     onValueChange = { email = it; authViewModel.resetState() },
-                    placeholder = { Text("Correo electrónico", color = KddTextHint) },
+                    placeholder = { Text("Correo electrónico", color = Color(0xFF757575)) },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
                     shape = RoundedCornerShape(10.dp),
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = KddPurple,
-                        unfocusedBorderColor = KddDivider
+                        unfocusedBorderColor = Color(0xFF9E9E9E)
                     )
                 )
 
@@ -163,7 +163,7 @@ fun LoginScreen(
                 OutlinedTextField(
                     value = password,
                     onValueChange = { password = it; authViewModel.resetState() },
-                    placeholder = { Text("Contraseña", color = KddTextHint) },
+                    placeholder = { Text("Contraseña", color = Color(0xFF757575)) },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
                     visualTransformation = PasswordVisualTransformation(),
@@ -171,7 +171,7 @@ fun LoginScreen(
                     shape = RoundedCornerShape(10.dp),
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = KddPurple,
-                        unfocusedBorderColor = KddDivider
+                        unfocusedBorderColor = Color(0xFF9E9E9E)
                     )
                 )
 

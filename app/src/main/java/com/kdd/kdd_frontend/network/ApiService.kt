@@ -1,7 +1,10 @@
 package com.kdd.kdd_frontend.network
 
 import com.kdd.kdd_frontend.network.dto.AuthResponse
+import com.kdd.kdd_frontend.network.dto.CrearPlanDto
 import com.kdd.kdd_frontend.network.dto.GoogleAuthRequest
+import com.kdd.kdd_frontend.network.dto.PlanDto
+import com.kdd.kdd_frontend.network.dto.UsuarioDto
 import retrofit2.Response
 import retrofit2.http.*
 
@@ -16,23 +19,23 @@ interface ApiService {
 
     // Usuarios
     @GET("api/usuarios/me")
-    suspend fun getMiPerfil(): Response<Map<String, Any>>
+    suspend fun getMiPerfil(): Response<UsuarioDto>
 
     @PUT("api/usuarios/me")
-    suspend fun editarPerfil(@Body body: Map<String, Any>): Response<Map<String, Any>>
+    suspend fun editarPerfil(@Body body: Map<String, Any>): Response<UsuarioDto>
 
     // Planes
     @GET("api/planes")
-    suspend fun getPlanes(): Response<List<Map<String, Any>>>
+    suspend fun getPlanes(): Response<List<PlanDto>>
 
     @GET("api/planes/mis-planes")
-    suspend fun getMisPlanes(): Response<List<Map<String, Any>>>
+    suspend fun getMisPlanes(): Response<List<PlanDto>>
 
     @GET("api/planes/{id}")
-    suspend fun getPlan(@Path("id") id: Long): Response<Map<String, Any>>
+    suspend fun getPlan(@Path("id") id: Long): Response<PlanDto>
 
     @POST("api/planes")
-    suspend fun crearPlan(@Body body: Map<String, Any>): Response<Map<String, Any>>
+    suspend fun crearPlan(@Body body: CrearPlanDto): Response<PlanDto>
 
     @POST("api/planes/{id}/unirse")
     suspend fun unirseAPlan(@Path("id") id: Long): Response<Void>
