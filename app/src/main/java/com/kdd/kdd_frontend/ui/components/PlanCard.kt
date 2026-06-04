@@ -170,14 +170,39 @@ fun PlanCard(
                                 fontWeight = FontWeight.SemiBold
                             )
                         }
-                        FilledIconButton(
-                            onClick = onClick,
-                            modifier = Modifier.size(32.dp),
-                            colors = IconButtonDefaults.filledIconButtonColors(containerColor = KddPurple)
+                        // Flecha decorativa (el click lo gestiona el Card)
+                        Box(
+                            modifier = Modifier
+                                .size(32.dp)
+                                .clip(androidx.compose.foundation.shape.CircleShape)
+                                .background(KddPurple),
+                            contentAlignment = Alignment.Center
                         ) {
                             Icon(
                                 imageVector = Icons.AutoMirrored.Filled.ArrowForwardIos,
-                                contentDescription = "Ver plan",
+                                contentDescription = null,
                                 modifier = Modifier.size(14.dp),
                                 tint = Color.White
-                        
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun InfoChip(text: String) {
+    Surface(
+        shape = RoundedCornerShape(6.dp),
+        color = KddSurfaceVariant
+    ) {
+        Text(
+            text = text,
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+            style = MaterialTheme.typography.labelSmall,
+            color = KddTextSecondary
+        )
+    }
+}

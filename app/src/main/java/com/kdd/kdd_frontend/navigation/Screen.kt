@@ -29,8 +29,8 @@ sealed class Screen(val route: String) {
 
     // Chat
     object Chats : Screen("chats")
-    object ChatDetail : Screen("chat_detail/{userId}") {
-        fun createRoute(userId: Long) = "chat_detail/$userId"
+    object ChatDetail : Screen("chat_detail/{userId}/{nombre}") {
+        fun createRoute(userId: Long, nombre: String) = "chat_detail/$userId/${android.net.Uri.encode(nombre)}"
     }
 
     // Perfil

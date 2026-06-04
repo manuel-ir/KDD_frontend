@@ -147,15 +147,19 @@ fun NavGraph(navController: NavHostController) {
         composable(Screen.Chats.route) {
             ChatsScreen(
                 onNavigateBack = { navController.popBackStack() },
-                onNavigateToChatDetail = { userId -> navController.navigate(Screen.ChatDetail.createRoute(userId)) }
+                onNavigateToChatDetail = { userId, nombre -> navController.navigate(Screen.ChatDetail.createRoute(userId, nombre)) }
             )
         }
         composable(
             route = Screen.ChatDetail.route,
-            arguments = listOf(navArgument("userId") { type = NavType.LongType })
+            arguments = listOf(
+                navArgument("userId") { type = NavType.LongType },
+                navArgument("nombre") { type = NavType.StringType }
+            )
         ) { backStackEntry ->
             ChatDetailScreen(
                 userId = backStackEntry.arguments?.getLong("userId") ?: 0L,
+                nombre = backStackEntry.arguments?.getString("nombre") ?: "",
                 onNavigateBack = { navController.popBackStack() }
             )
         }
@@ -164,7 +168,12 @@ fun NavGraph(navController: NavHostController) {
         composable(Screen.Account.route) {
             AccountScreen(
                 onNavigateBack = { navController.popBackStack() },
-                onNavigateToEditProfile = { navController.navigate(Screen.EditProfile.route) }
+                onNavigateToEditProfile = { navController.navigate(Screen.EditProfile.route) },
+                onLogout = {
+                    navController.navigate(Screen.Login.route) {
+                        popUpTo(0) { inclusive = true }
+                    }
+                }
             )
         }
         composable(Screen.EditProfile.route) {
