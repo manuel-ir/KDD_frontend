@@ -41,6 +41,30 @@ class PerfilViewModel : ViewModel() {
         }
     }
 
+    fun editarPerfil(
+        nombre: String,
+        descripcion: String,
+        edad: Int?,
+        onSuccess: () -> Unit,
+        onError: (String) -> Unit
+    ) {
+        viewModelScope.launch {
+            try {
+                val body = mutableMapOf<String, Any>("nombre" to nombre, "descripcion" to descripcion)
+                if (edad != null) body["edad"] = edad
+                val response = ApiClient.api.editarPerfil(body)
+                if (response.isSuccessful) {
+                    _perfilState.value = PerfilState.Success(response.body()!!)
+                    onSuccess()
+                } else {
+                    onError("Error ${response.code()}")
+                }
+            } catch (e: Exception) {
+                onError("No se pudo conectar con el servidor")
+            }
+        }
+    }
+
     fun cerrarSesion(context: Context, onLogout: () -> Unit) {
         viewModelScope.launch {
             TokenDataStore.clearSession(context)

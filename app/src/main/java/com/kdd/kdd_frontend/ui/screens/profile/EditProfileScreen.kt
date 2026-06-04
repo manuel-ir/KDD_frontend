@@ -18,17 +18,32 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.kdd.kdd_frontend.ui.theme.*
+import com.kdd.kdd_frontend.viewmodel.PerfilState
+import com.kdd.kdd_frontend.viewmodel.PerfilViewModel
 
 @Composable
 fun EditProfileScreen(
     onNavigateBack: () -> Unit
 ) {
-    var nombre by remember { mutableStateOf("Manuel") }
-    var edad by remember { mutableStateOf("22") }
+    val viewModel: PerfilViewModel = viewModel()
+    val perfilState by viewModel.perfilState.collectAsState()
+
+    var nombre by remember { mutableStateOf("") }
+    var edad by remember { mutableStateOf("") }
     var descripcion by remember { mutableStateOf("") }
     var showNombreDialog by remember { mutableStateOf(false) }
     var showDescripcionDialog by remember { mutableStateOf(false) }
+
+    LaunchedEffect(perfilState) {
+        if (perfilState is PerfilState.Success) {
+            val usuario = (perfilState as PerfilState.Success).usuario
+            if (nombre.isBlank()) nombre = usuario.nombre ?: ""
+            if (descripcion.isBlank()) descripcion = usuario.descripcion ?: ""
+            if (edad.isBlank()) edad = usuario.edad?.toString() ?: ""
+        }
+    }
 
     Column(
         modifier = Modifier
@@ -51,14 +66,13 @@ fun EditProfileScreen(
         HorizontalDivider()
         Spacer(modifier = Modifier.height(24.dp))
 
-        // Avatar
         Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
             Box {
                 Box(
                     modifier = Modifier.size(80.dp).clip(CircleShape).background(KddSurfaceVariant),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text(nombre.firstOrNull()?.uppercaseChar()?.toString() ?: "M", fontSize = 32.sp, fontWeight = FontWeight.Bold, color = KddTextSecondary)
+                    Text(nombre.firstOrNull()?.uppercaseChar()?.toString() ?: "?", fontSize = 32.sp, fontWeight = FontWeight.Bold, color = KddTextSecondary)
                 }
                 Box(
                     modifier = Modifier.size(26.dp).clip(CircleShape).background(KddPurple).align(Alignment.TopEnd),
@@ -71,9 +85,8 @@ fun EditProfileScreen(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Nombre y descripción visibles
         Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(nombre, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = KddTextPrimary)
+            Text(nombre.ifBlank { "..." }, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = KddTextPrimary)
             Spacer(modifier = Modifier.height(4.dp))
             Text(
                 if (descripcion.isNotBlank()) descripcion else "Sin descripción",
@@ -102,7 +115,23 @@ fun EditProfileScreen(
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
                         TextButton(onClick = { showNombreDialog = false }) { Text("Cancelar", color = KddTextSecondary) }
                         Spacer(modifier = Modifier.width(8.dp))
-                        Button(onClick = { nombre = tempNombre; edad = tempEdad; showNombreDialog = false }, colors = ButtonDefaults.buttonColors(containerColor = KddPurple), shape = RoundedCornerShape(10.dp)) { Text("Guardar") }
+                        Button(
+                            onClick = {
+                                viewModel.editarPerfil(
+                                    nombre = tempNombre.trim(),
+                                    descripcion = descripcion,
+                                    edad = tempEdad.toIntOrNull(),
+                                    onSuccess = {
+                                        nombre = tempNombre.trim()
+                                        edad = tempEdad
+                                        showNombreDialog = false
+                                    },
+                                    onError = { showNombreDialog = false }
+                                )
+                            },
+                            colors = ButtonDefaults.buttonColors(containerColor = KddPurple),
+                            shape = RoundedCornerShape(10.dp)
+                        ) { Text("Guardar") }
                     }
                 }
             }
@@ -120,7 +149,22 @@ fun EditProfileScreen(
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
                         TextButton(onClick = { showDescripcionDialog = false }) { Text("Cancelar", color = KddTextSecondary) }
                         Spacer(modifier = Modifier.width(8.dp))
-                        Button(onClick = { descripcion = tempDesc; showDescripcionDialog = false }, colors = ButtonDefaults.buttonColors(containerColor = KddPurple), shape = RoundedCornerShape(10.dp)) { Text("Guardar") }
+                        Button(
+                            onClick = {
+                                viewModel.editarPerfil(
+                                    nombre = nombre,
+                                    descripcion = tempDesc,
+                                    edad = edad.toIntOrNull(),
+                                    onSuccess = {
+                                        descripcion = tempDesc
+                                        showDescripcionDialog = false
+                                    },
+                                    onError = { showDescripcionDialog = false }
+                                )
+                            },
+                            colors = ButtonDefaults.buttonColors(containerColor = KddPurple),
+                            shape = RoundedCornerShape(10.dp)
+                        ) { Text("Guardar") }
                     }
                 }
             }
