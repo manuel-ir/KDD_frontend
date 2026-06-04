@@ -17,28 +17,20 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.kdd.kdd_frontend.ui.theme.*
-
-data class ChatPreview(
-    val userId: Long,
-    val nombre: String,
-    val ultimoMensaje: String,
-    val fotoUrl: String? = null
-)
+import com.kdd.kdd_frontend.viewmodel.AmigosState
+import com.kdd.kdd_frontend.viewmodel.ChatViewModel
 
 @Composable
 fun ChatsScreen(
     onNavigateBack: () -> Unit,
-    onNavigateToChatDetail: (Long) -> Unit
+    onNavigateToChatDetail: (Long, String) -> Unit
 ) {
-    val chats = listOf(
-        ChatPreview(1L, "Javier", "No te vas a creer a quien me encontré en la ruta del otr..."),
-        ChatPreview(2L, "Emma", "¡Diviértete! Y avísame si necesitas ayuda o más consejos ✌"),
-        ChatPreview(3L, "Lucía", "¿Quedamos el sábado para el senderismo?")
-    )
+    val viewModel: ChatViewModel = viewModel()
+    val amigosState by viewModel.amigosState.collectAsState()
 
     Column(modifier = Modifier.fillMaxSize().background(Color.White)) {
-        // Barra superior
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -63,20 +55,48 @@ fun ChatsScreen(
 
         HorizontalDivider()
 
-        LazyColumn {
-            items(chats) { chat ->
-                ChatPreviewRow(
-                    chat = chat,
-                    onClick = { onNavigateToChatDetail(chat.userId) }
-                )
-                HorizontalDivider(modifier = Modifier.padding(start = 72.dp))
+        when (val estado = amigosState) {
+            is AmigosState.Loading -> {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator(color = KddPurple)
+                }
+            }
+            is AmigosState.Error -> {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text(estado.mensaje, style = MaterialTheme.typography.bodyMedium, color = KddTextSecondary)
+                        Button(onClick = { viewModel.cargarAmigos() }, colors = ButtonDefaults.buttonColors(containerColor = KddPurple)) {
+                            Text("Reintentar")
+                        }
+                    }
+                }
+            }
+            is AmigosState.Success -> {
+                if (estado.amigos.isEmpty()) {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Text("Aún no tienes amigos", style = MaterialTheme.typography.bodyMedium, color = KddTextSecondary)
+                            Text("Únete a planes para conocer gente", style = MaterialTheme.typography.bodySmall, color = KddTextHint)
+                        }
+                    }
+                } else {
+                    LazyColumn {
+                        items(estado.amigos) { amigo ->
+                            AmigoRow(
+                                nombre = amigo.nombre,
+                                onClick = { onNavigateToChatDetail(amigo.idAmigo, amigo.nombre) }
+                            )
+                            HorizontalDivider(modifier = Modifier.padding(start = 72.dp))
+                        }
+                    }
+                }
             }
         }
     }
 }
 
 @Composable
-private fun ChatPreviewRow(chat: ChatPreview, onClick: () -> Unit) {
+private fun AmigoRow(nombre: String, onClick: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -85,7 +105,6 @@ private fun ChatPreviewRow(chat: ChatPreview, onClick: () -> Unit) {
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        // Avatar
         Box(
             modifier = Modifier
                 .size(48.dp)
@@ -94,7 +113,7 @@ private fun ChatPreviewRow(chat: ChatPreview, onClick: () -> Unit) {
             contentAlignment = Alignment.Center
         ) {
             Text(
-                text = chat.nombre.first().toString(),
+                text = nombre.first().toString(),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
                 color = KddTextSecondary
@@ -103,15 +122,15 @@ private fun ChatPreviewRow(chat: ChatPreview, onClick: () -> Unit) {
 
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = chat.nombre,
+                text = nombre,
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.SemiBold,
                 color = KddTextPrimary
             )
             Text(
-                text = chat.ultimoMensaje,
+                text = "Toca para abrir la conversación",
                 style = MaterialTheme.typography.bodySmall,
-                color = KddTextSecondary,
+                color = KddTextHint,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )

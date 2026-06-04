@@ -1,8 +1,11 @@
 package com.kdd.kdd_frontend.network
 
+import com.kdd.kdd_frontend.network.dto.AmistadDto
 import com.kdd.kdd_frontend.network.dto.AuthResponse
+import com.kdd.kdd_frontend.network.dto.ComunidadDto
 import com.kdd.kdd_frontend.network.dto.CrearPlanDto
 import com.kdd.kdd_frontend.network.dto.GoogleAuthRequest
+import com.kdd.kdd_frontend.network.dto.MensajeDto
 import com.kdd.kdd_frontend.network.dto.PlanDto
 import com.kdd.kdd_frontend.network.dto.UsuarioDto
 import retrofit2.Response
@@ -45,20 +48,20 @@ interface ApiService {
 
     // Comunidades
     @GET("api/comunidades")
-    suspend fun getComunidades(): Response<List<Map<String, Any>>>
+    suspend fun getComunidades(): Response<List<ComunidadDto>>
 
     @GET("api/comunidades/{id}")
-    suspend fun getComunidad(@Path("id") id: Long): Response<Map<String, Any>>
+    suspend fun getComunidad(@Path("id") id: Long): Response<ComunidadDto>
 
     @POST("api/comunidades")
-    suspend fun crearComunidad(@Body body: Map<String, Any>): Response<Map<String, Any>>
+    suspend fun crearComunidad(@Body body: Map<String, Any>): Response<ComunidadDto>
 
     @POST("api/comunidades/{id}/unirse")
     suspend fun unirseAComunidad(@Path("id") id: Long): Response<Void>
 
     // Amistades
     @GET("api/amistades")
-    suspend fun getAmigos(): Response<List<Map<String, Any>>>
+    suspend fun getAmigos(): Response<List<AmistadDto>>
 
     @POST("api/amistades/{id}")
     suspend fun enviarSolicitud(@Path("id") id: Long): Response<Void>
@@ -71,10 +74,10 @@ interface ApiService {
 
     // Mensajes
     @GET("api/mensajes/{id}")
-    suspend fun getConversacion(@Path("id") id: Long): Response<List<Map<String, Any>>>
+    suspend fun getConversacion(@Path("id") id: Long): Response<List<MensajeDto>>
 
     @POST("api/mensajes/{id}")
-    suspend fun enviarMensaje(@Path("id") id: Long, @Body body: Map<String, String>): Response<Map<String, Any>>
+    suspend fun enviarMensaje(@Path("id") id: Long, @Body body: Map<String, String>): Response<MensajeDto>
 
     // Valoraciones
     @POST("api/valoraciones")
