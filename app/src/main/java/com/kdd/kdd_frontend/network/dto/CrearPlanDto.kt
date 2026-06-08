@@ -10,5 +10,5 @@ data class CrearPlanDto(
     val edadMin: Int,
     val edadMax: Int,
     val numMaxPersonas: Int,
-    val idioma: String
+    val idioma: String?
 )

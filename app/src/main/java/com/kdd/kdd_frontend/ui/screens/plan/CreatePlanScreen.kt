@@ -22,7 +22,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.kdd.kdd_frontend.network.dto.CrearPlanDto
 import com.kdd.kdd_frontend.ui.theme.*
+import com.kdd.kdd_frontend.viewmodel.PlanViewModel
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
@@ -46,6 +49,9 @@ fun CreatePlanScreen(
     onNavigateBack: () -> Unit,
     onPlanCreated: () -> Unit
 ) {
+    val viewModel: PlanViewModel = viewModel()
+    var cargando by remember { mutableStateOf(false) }
+
     var titulo by remember { mutableStateOf("") }
     var categoria by remember { mutableStateOf("") }
     var categoriaPersonalizada by remember { mutableStateOf("") }
@@ -282,15 +288,44 @@ fun CreatePlanScreen(
 
         // Botón terminar
         Box(modifier = Modifier.padding(16.dp)) {
+            val categoriaFinal = if (categoria == "Personalizada") categoriaPersonalizada.trim() else categoria
+            val formValido = titulo.isNotBlank() && categoria.isNotBlank() &&
+                    (categoria != "Personalizada" || categoriaPersonalizada.isNotBlank())
             Button(
-                onClick = onPlanCreated,
+                onClick = {
+                    if (formValido && !cargando) {
+                        cargando = true
+                        val apiFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd")
+                        viewModel.crearPlan(
+                            dto = CrearPlanDto(
+                                titulo = titulo.trim(),
+                                descripcion = descripcion.trim(),
+                                categoria = categoriaFinal,
+                                fechaEvento = fechaDesde?.format(apiFormatter),
+                                horaEvento = horaDesde?.format(DateTimeFormatter.ofPattern("HH:mm:ss")),
+                                ubicacionTexto = null,
+                                edadMin = edadMin.toInt(),
+                                edadMax = edadMax.toInt(),
+                                numMaxPersonas = (vasAcompanado + maxAcompanantes).toInt(),
+                                idioma = idiomasSeleccionados.joinToString(", ").ifBlank { null }
+                            ),
+                            onSuccess = { onPlanCreated() },
+                            onError = { cargando = false }
+                        )
+                    }
+                },
                 modifier = Modifier.fillMaxWidth().height(52.dp),
                 shape = RoundedCornerShape(26.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = KddPurple),
-                enabled = titulo.isNotBlank() && categoria.isNotBlank() &&
-                        (categoria != "Personalizada" || categoriaPersonalizada.isNotBlank())
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = if (formValido && !cargando) KddPurple else KddDivider
+                ),
+                enabled = formValido && !cargando
             ) {
-                Text("Terminar", color = Color.White, fontWeight = FontWeight.SemiBold, fontSize = 16.sp)
+                if (cargando) {
+                    CircularProgressIndicator(modifier = Modifier.size(20.dp), color = Color.White, strokeWidth = 2.dp)
+                } else {
+                    Text("Terminar", color = Color.White, fontWeight = FontWeight.SemiBold, fontSize = 16.sp)
+                }
             }
         }
     }
