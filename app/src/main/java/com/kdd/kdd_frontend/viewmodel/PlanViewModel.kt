@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.kdd.kdd_frontend.network.ApiClient
 import com.kdd.kdd_frontend.network.dto.CrearPlanDto
+import com.kdd.kdd_frontend.network.dto.ParticipanteDto
 import com.kdd.kdd_frontend.network.dto.PlanDto
 import com.kdd.kdd_frontend.ui.components.PlanCardData
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -35,6 +36,12 @@ class PlanViewModel : ViewModel() {
 
     private val _participando = MutableStateFlow(false)
     val participando: StateFlow<Boolean> = _participando
+
+    private val _participantes = MutableStateFlow<List<ParticipanteDto>>(emptyList())
+    val participantes: StateFlow<List<ParticipanteDto>> = _participantes
+
+    private val _solicitudesPlan = MutableStateFlow<List<ParticipanteDto>>(emptyList())
+    val solicitudesPlan: StateFlow<List<ParticipanteDto>> = _solicitudesPlan
 
     init {
         cargarPlanes()
@@ -104,6 +111,87 @@ class PlanViewModel : ViewModel() {
                 }
             } catch (e: Exception) {
                 onError("No se pudo conectar con el servidor")
+            }
+        }
+    }
+
+    fun cargarParticipantes(planId: Long) {
+        viewModelScope.launch {
+            try {
+                val response = ApiClient.api.getParticipantes(planId)
+                if (response.isSuccessful) {
+                    _participantes.value = response.body() ?: emptyList()
+                }
+            } catch (e: Exception) {
+                // silencioso
+            }
+        }
+    }
+
+    fun valorar(
+        valoradoId: Long,
+        planId: Long,
+        puntuacion: Int,
+        onSuccess: () -> Unit,
+        onError: (String) -> Unit
+    ) {
+        viewModelScope.launch {
+            try {
+                val body = mapOf<String, Any>(
+                    "idValorado" to valoradoId,
+                    "idPlan" to planId,
+                    "puntuacion" to puntuacion
+                )
+                val response = ApiClient.api.valorar(body)
+                if (response.isSuccessful) onSuccess()
+                else onError("Error al valorar (${response.code()})")
+            } catch (e: Exception) {
+                onError("No se pudo conectar con el servidor")
+            }
+        }
+    }
+
+    fun cargarSolicitudesPlan(planId: Long) {
+        viewModelScope.launch {
+            try {
+                val response = ApiClient.api.getSolicitudesPlan(planId)
+                if (response.isSuccessful) {
+                    _solicitudesPlan.value = response.body() ?: emptyList()
+                }
+            } catch (e: Exception) { /* silencioso */ }
+        }
+    }
+
+    fun confirmarParticipante(planId: Long, usuarioId: Long, onSuccess: () -> Unit) {
+        viewModelScope.launch {
+            try {
+                val response = ApiClient.api.confirmarParticipante(planId, usuarioId)
+                if (response.isSuccessful) {
+                    cargarSolicitudesPlan(planId)
+                    cargarParticipantes(planId)
+                    onSuccess()
+                }
+            } catch (e: Exception) { /* silencioso */ }
+        }
+    }
+
+    fun rechazarParticipante(planId: Long, usuarioId: Long) {
+        viewModelScope.launch {
+            try {
+                ApiClient.api.rechazarParticipante(planId, usuarioId)
+                cargarSolicitudesPlan(planId)
+            } catch (e: Exception) { /* silencioso */ }
+        }
+    }
+
+    fun enviarSolicitud(destinatarioId: Long, onSuccess: () -> Unit, onError: (String) -> Unit) {
+        viewModelScope.launch {
+            try {
+                val response = ApiClient.api.enviarSolicitud(destinatarioId)
+                if (response.isSuccessful) onSuccess()
+                else onError("No se pudo enviar la solicitud")
+            } catch (e: Exception) {
+                onError("Error de conexión")
             }
         }
     }

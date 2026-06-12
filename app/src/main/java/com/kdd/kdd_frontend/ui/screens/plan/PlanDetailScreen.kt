@@ -22,6 +22,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.kdd.kdd_frontend.network.dto.ParticipanteDto
 import com.kdd.kdd_frontend.ui.theme.*
 import com.kdd.kdd_frontend.viewmodel.PlanDetalleState
 import com.kdd.kdd_frontend.viewmodel.PlanViewModel
@@ -29,12 +30,9 @@ import com.kdd.kdd_frontend.viewmodel.PlanViewModel
 data class ParticipanteInfo(
     val id: Long,
     val nombre: String,
-    val edad: Int,
+    val edad: Int?,
     val descripcion: String = "",
-    val fotoPerfil: String? = null,
-    val esAmigo: Boolean = false,
-    val valoracionMedia: Float = 0f,
-    val numValoraciones: Int = 0
+    val fotoPerfil: String? = null
 )
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -46,12 +44,23 @@ fun PlanDetailScreen(
     val viewModel: PlanViewModel = viewModel()
     val detalleState by viewModel.detalleState.collectAsState()
     val participando by viewModel.participando.collectAsState()
+    val participantesDto by viewModel.participantes.collectAsState()
+    val solicitudesPlan by viewModel.solicitudesPlan.collectAsState()
 
     var selectedTab by remember { mutableIntStateOf(0) }
     var participanteSeleccionado by remember { mutableStateOf<ParticipanteInfo?>(null) }
 
     LaunchedEffect(planId) {
         viewModel.cargarDetalle(planId)
+    }
+
+    LaunchedEffect(detalleState) {
+        val plan = (detalleState as? PlanDetalleState.Success)?.plan ?: return@LaunchedEffect
+        if (plan.creador) viewModel.cargarSolicitudesPlan(planId)
+    }
+
+    LaunchedEffect(selectedTab) {
+        if (selectedTab == 1) viewModel.cargarParticipantes(planId)
     }
 
     when (val estado = detalleState) {
@@ -68,19 +77,20 @@ fun PlanDetailScreen(
         is PlanDetalleState.Success -> {
             val plan = estado.plan
             val numParticipantes = plan.numParticipantes
-            val tabs = listOf("Información", "Presente ($numParticipantes)")
+            val tabs = if (plan.creador) {
+                listOf("Información", "Presente ($numParticipantes)", "Solicitudes (${solicitudesPlan.size})")
+            } else {
+                listOf("Información", "Presente ($numParticipantes)")
+            }
 
-            val participantes = remember(numParticipantes) {
-                (1..maxOf(numParticipantes, 1)).map { i ->
-                    ParticipanteInfo(
-                        id = i.toLong(),
-                        nombre = "Participante $i",
-                        edad = 20 + (i % 15),
-                        esAmigo = i % 3 == 0,
-                        valoracionMedia = (3..5).random().toFloat(),
-                        numValoraciones = (0..15).random()
-                    )
-                }
+            val participantes = participantesDto.map { dto ->
+                ParticipanteInfo(
+                    id = dto.id,
+                    nombre = dto.nombre,
+                    edad = dto.edad,
+                    descripcion = dto.descripcion ?: "",
+                    fotoPerfil = dto.fotoPerfil
+                )
             }
 
             Scaffold(
@@ -100,9 +110,9 @@ fun PlanDetailScreen(
                             ) {
                                 Icon(Icons.Filled.Share, contentDescription = "Compartir", tint = KddTextPrimary)
                             }
-                            val esCreador = (detalleState as? PlanDetalleState.Success)?.plan?.creador == true
+                            val planActual = (detalleState as? PlanDetalleState.Success)?.plan
                             when {
-                                esCreador -> {
+                                planActual?.creador == true -> {
                                     Surface(
                                         modifier = Modifier.weight(1f).height(48.dp),
                                         shape = RoundedCornerShape(24.dp),
@@ -110,6 +120,17 @@ fun PlanDetailScreen(
                                     ) {
                                         Box(contentAlignment = Alignment.Center) {
                                             Text("Tu plan", color = KddTextSecondary, fontWeight = FontWeight.SemiBold)
+                                        }
+                                    }
+                                }
+                                planActual?.pendiente == true -> {
+                                    Surface(
+                                        modifier = Modifier.weight(1f).height(48.dp),
+                                        shape = RoundedCornerShape(24.dp),
+                                        color = KddSurface
+                                    ) {
+                                        Box(contentAlignment = Alignment.Center) {
+                                            Text("Solicitud enviada", color = KddTextSecondary, fontWeight = FontWeight.SemiBold)
                                         }
                                     }
                                 }
@@ -213,8 +234,8 @@ fun PlanDetailScreen(
                                     }
                                     PlanInfoRow(
                                         icon = Icons.Filled.Group,
-                                        label = "Presente",
-                                        value = "Ver los $numParticipantes participantes",
+                                        label = "Apuntados",
+                                        value = "${plan.numApuntados} persona${if (plan.numApuntados != 1) "s" else ""}",
                                         isClickable = true,
                                         onClick = { selectedTab = 1 }
                                     )
@@ -241,20 +262,53 @@ fun PlanDetailScreen(
                             }
                         }
                         1 -> {
-                            item {
-                                LazyVerticalGrid(
-                                    columns = GridCells.Fixed(3),
-                                    modifier = Modifier.fillMaxWidth().height(400.dp).padding(8.dp),
-                                    userScrollEnabled = false
-                                ) {
-                                    items(participantes.size) { index ->
-                                        val p = participantes[index]
-                                        PresenteCard(
-                                            nombre = p.nombre,
-                                            edad = p.edad,
-                                            onClick = { participanteSeleccionado = p }
-                                        )
+                            if (participantes.isEmpty()) {
+                                item {
+                                    Box(
+                                        modifier = Modifier.fillMaxWidth().padding(32.dp),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text("Sin participantes confirmados todavía", style = MaterialTheme.typography.bodyMedium, color = KddTextHint)
                                     }
+                                }
+                            } else {
+                                item {
+                                    LazyVerticalGrid(
+                                        columns = GridCells.Fixed(3),
+                                        modifier = Modifier.fillMaxWidth().height(400.dp).padding(8.dp),
+                                        userScrollEnabled = false
+                                    ) {
+                                        items(participantes.size) { index ->
+                                            val p = participantes[index]
+                                            PresenteCard(
+                                                nombre = p.nombre,
+                                                edad = p.edad,
+                                                onClick = { participanteSeleccionado = p }
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        2 -> {
+                            if (solicitudesPlan.isEmpty()) {
+                                item {
+                                    Box(
+                                        modifier = Modifier.fillMaxWidth().padding(32.dp),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text("No hay solicitudes pendientes", style = MaterialTheme.typography.bodyMedium, color = KddTextHint)
+                                    }
+                                }
+                            } else {
+                                items(solicitudesPlan.size) { index ->
+                                    val solicitante = solicitudesPlan[index]
+                                    SolicitudParticipanteRow(
+                                        participante = solicitante,
+                                        onConfirmar = { viewModel.confirmarParticipante(planId, solicitante.id, onSuccess = {}) },
+                                        onRechazar = { viewModel.rechazarParticipante(planId, solicitante.id) }
+                                    )
+                                    HorizontalDivider(modifier = Modifier.padding(start = 72.dp), color = KddDivider)
                                 }
                             }
                         }
@@ -262,10 +316,14 @@ fun PlanDetailScreen(
                 }
             }
 
+            val estaConfirmado = plan.creador || (plan.miembro && !plan.pendiente)
+
             participanteSeleccionado?.let { p ->
                 PerfilUsuarioDialog(
                     participante = p,
                     planId = planId,
+                    viewModel = viewModel,
+                    estaConfirmado = estaConfirmado,
                     onDismiss = { participanteSeleccionado = null }
                 )
             }
@@ -277,10 +335,13 @@ fun PlanDetailScreen(
 private fun PerfilUsuarioDialog(
     participante: ParticipanteInfo,
     planId: Long,
+    viewModel: PlanViewModel,
+    estaConfirmado: Boolean,
     onDismiss: () -> Unit
 ) {
-    var tabSeleccionado by remember { mutableIntStateOf(0) }
     var estrellas by remember { mutableIntStateOf(0) }
+    var valoracionEnviada by remember { mutableStateOf(false) }
+    var solicitudEnviada by remember { mutableStateOf(false) }
 
     Dialog(
         onDismissRequest = onDismiss,
@@ -312,67 +373,49 @@ private fun PerfilUsuarioDialog(
                     ) {
                         Text(participante.nombre.first().toString(), color = Color.White, fontWeight = FontWeight.Bold, fontSize = 36.sp)
                     }
-
                     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                             Text(participante.nombre, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, color = KddTextPrimary)
-                            Text("${participante.edad}", style = MaterialTheme.typography.headlineSmall, color = KddTextSecondary)
-                        }
-                        if (participante.numValoraciones > 0) {
-                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                                Icon(Icons.Filled.Star, contentDescription = null, tint = KddYellow, modifier = Modifier.size(18.dp))
-                                Text("%.1f".format(participante.valoracionMedia), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold, color = KddTextPrimary)
-                                Text("(${participante.numValoraciones})", style = MaterialTheme.typography.bodySmall, color = KddTextHint)
-                            }
-                        } else {
-                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                                Icon(Icons.Filled.StarBorder, contentDescription = null, tint = KddTextHint, modifier = Modifier.size(18.dp))
-                                Text("Sin valoraciones", style = MaterialTheme.typography.bodySmall, color = KddTextHint)
+                            if (participante.edad != null) {
+                                Text("${participante.edad}", style = MaterialTheme.typography.headlineSmall, color = KddTextSecondary)
                             }
                         }
                     }
-                }
-
-                TabRow(selectedTabIndex = tabSeleccionado, containerColor = Color.White, contentColor = KddPurple) {
-                    Tab(selected = tabSeleccionado == 0, onClick = { tabSeleccionado = 0 }, text = { Text("Información", fontWeight = if (tabSeleccionado == 0) FontWeight.Bold else FontWeight.Normal) })
-                    Tab(selected = tabSeleccionado == 1, onClick = { tabSeleccionado = 1 }, text = { Text("Planes", fontWeight = if (tabSeleccionado == 1) FontWeight.Bold else FontWeight.Normal) })
                 }
 
                 LazyColumn(
                     modifier = Modifier.weight(1f).fillMaxWidth().padding(horizontal = 20.dp, vertical = 16.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    when (tabSeleccionado) {
-                        0 -> {
-                            item {
-                                Text(
-                                    text = if (participante.descripcion.isNotBlank()) participante.descripcion else "Este usuario no ha añadido una descripción.",
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = if (participante.descripcion.isNotBlank()) KddTextSecondary else KddTextHint
-                                )
-                            }
-                            item {
-                                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                                    HorizontalDivider(color = KddDivider)
-                                    Text("Valora a ${participante.nombre}", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold, color = KddTextPrimary)
-                                    Row(horizontalArrangement = Arrangement.Center, modifier = Modifier.fillMaxWidth()) {
-                                        (1..5).forEach { i ->
-                                            IconButton(onClick = { estrellas = i }) {
-                                                Icon(
-                                                    imageVector = if (i <= estrellas) Icons.Filled.Star else Icons.Filled.StarBorder,
-                                                    contentDescription = null,
-                                                    tint = KddYellow,
-                                                    modifier = Modifier.size(36.dp)
-                                                )
-                                            }
+                    item {
+                        Text(
+                            text = if (participante.descripcion.isNotBlank()) participante.descripcion else "Este usuario no ha añadido una descripción.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = if (participante.descripcion.isNotBlank()) KddTextSecondary else KddTextHint
+                        )
+                    }
+                    item {
+                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            HorizontalDivider(color = KddDivider)
+                            Text(
+                                text = if (valoracionEnviada) "¡Valoración enviada!" else "Valora a ${participante.nombre}",
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.SemiBold,
+                                color = if (valoracionEnviada) KddPurple else KddTextPrimary
+                            )
+                            if (!valoracionEnviada) {
+                                Row(horizontalArrangement = Arrangement.Center, modifier = Modifier.fillMaxWidth()) {
+                                    (1..5).forEach { i ->
+                                        IconButton(onClick = { estrellas = i }) {
+                                            Icon(
+                                                imageVector = if (i <= estrellas) Icons.Filled.Star else Icons.Filled.StarBorder,
+                                                contentDescription = null,
+                                                tint = KddYellow,
+                                                modifier = Modifier.size(36.dp)
+                                            )
                                         }
                                     }
                                 }
-                            }
-                        }
-                        1 -> {
-                            item {
-                                Text("Los planes compartidos se mostrarán aquí.", style = MaterialTheme.typography.bodyMedium, color = KddTextHint)
                             }
                         }
                     }
@@ -380,42 +423,64 @@ private fun PerfilUsuarioDialog(
 
                 Surface(shadowElevation = 4.dp) {
                     Box(modifier = Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal = 20.dp, vertical = 12.dp)) {
-                        if (estrellas > 0) {
-                            val planViewModel: PlanViewModel = viewModel()
-                            Button(
-                                onClick = {
-                                    // POST /api/valoraciones — próximo paso
-                                },
-                                modifier = Modifier.fillMaxWidth().height(52.dp),
-                                shape = RoundedCornerShape(26.dp),
-                                colors = ButtonDefaults.buttonColors(containerColor = KddPurple)
-                            ) {
-                                Icon(Icons.Filled.Star, contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp))
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text("Enviar valoración", color = Color.White, fontWeight = FontWeight.SemiBold)
+                        when {
+                            estrellas > 0 && !valoracionEnviada && !estaConfirmado -> {
+                                Surface(
+                                    shape = RoundedCornerShape(12.dp),
+                                    color = Color(0xFFFFF3E0),
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Text(
+                                        text = "Solo puedes valorar cuando el anfitrión te confirme como presente en el plan",
+                                        modifier = Modifier.padding(14.dp),
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = Color(0xFF795548)
+                                    )
+                                }
                             }
-                        } else if (participante.esAmigo) {
-                            OutlinedButton(
-                                onClick = { },
-                                modifier = Modifier.fillMaxWidth().height(52.dp),
-                                shape = RoundedCornerShape(26.dp),
-                                colors = ButtonDefaults.outlinedButtonColors(contentColor = KddPurple)
-                            ) {
-                                Icon(Icons.Filled.PersonRemove, contentDescription = null, modifier = Modifier.size(18.dp))
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text("Eliminar amigo", fontWeight = FontWeight.SemiBold)
+                            estrellas > 0 && !valoracionEnviada -> {
+                                Button(
+                                    onClick = {
+                                        viewModel.valorar(
+                                            valoradoId = participante.id,
+                                            planId = planId,
+                                            puntuacion = estrellas,
+                                            onSuccess = { valoracionEnviada = true },
+                                            onError = { }
+                                        )
+                                    },
+                                    modifier = Modifier.fillMaxWidth().height(52.dp),
+                                    shape = RoundedCornerShape(26.dp),
+                                    colors = ButtonDefaults.buttonColors(containerColor = KddPurple)
+                                ) {
+                                    Icon(Icons.Filled.Star, contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp))
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text("Enviar valoración", color = Color.White, fontWeight = FontWeight.SemiBold)
+                                }
                             }
-                        } else {
-                            Button(
-                                onClick = { },
-                                modifier = Modifier.fillMaxWidth().height(52.dp),
-                                shape = RoundedCornerShape(26.dp),
-                                colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent, contentColor = KddPurple),
-                                elevation = ButtonDefaults.buttonElevation(0.dp)
-                            ) {
-                                Icon(Icons.Filled.PersonAdd, contentDescription = null, tint = KddPurple, modifier = Modifier.size(20.dp))
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text("Añadir amigo", fontWeight = FontWeight.SemiBold, color = KddPurple)
+                            !solicitudEnviada -> {
+                                Button(
+                                    onClick = {
+                                        solicitudEnviada = true
+                                        viewModel.enviarSolicitud(participante.id, onSuccess = {}, onError = {})
+                                    },
+                                    modifier = Modifier.fillMaxWidth().height(52.dp),
+                                    shape = RoundedCornerShape(26.dp),
+                                    colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent, contentColor = KddPurple),
+                                    elevation = ButtonDefaults.buttonElevation(0.dp)
+                                ) {
+                                    Icon(Icons.Filled.PersonAdd, contentDescription = null, tint = KddPurple, modifier = Modifier.size(20.dp))
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text("Añadir amigo", fontWeight = FontWeight.SemiBold, color = KddPurple)
+                                }
+                            }
+                            else -> {
+                                Box(
+                                    modifier = Modifier.fillMaxWidth().height(52.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text("Solicitud enviada", color = KddTextHint, style = MaterialTheme.typography.bodyMedium)
+                                }
                             }
                         }
                     }
@@ -450,16 +515,79 @@ private fun PlanInfoRow(
 }
 
 @Composable
-private fun PresenteCard(nombre: String, edad: Int, onClick: () -> Unit) {
-    Column(modifier = Modifier.padding(6.dp).clickable { onClick() }, horizontalAlignment = Alignment.CenterHorizontally) {
+private fun SolicitudParticipanteRow(
+    participante: ParticipanteDto,
+    onConfirmar: () -> Unit,
+    onRechazar: () -> Unit
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
         Box(
-            modifier = Modifier.fillMaxWidth().aspectRatio(1f).clip(RoundedCornerShape(8.dp)).background(KddSurfaceVariant),
+            modifier = Modifier.size(44.dp).clip(CircleShape).background(KddSurfaceVariant),
             contentAlignment = Alignment.Center
         ) {
-            Text(nombre.first().toString(), fontWeight = FontWeight.Bold, fontSize = 24.sp, color = KddTextSecondary)
+            Text(
+                text = participante.nombre.firstOrNull()?.uppercaseChar()?.toString() ?: "?",
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Bold,
+                color = KddTextSecondary
+            )
+        }
+        Column(modifier = Modifier.weight(1f)) {
+            Text(participante.nombre, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold, color = KddTextPrimary)
+            if (participante.edad != null) {
+                Text("${participante.edad} años", style = MaterialTheme.typography.bodySmall, color = KddTextHint)
+            }
+        }
+        IconButton(
+            onClick = onConfirmar,
+            modifier = Modifier.size(36.dp).clip(CircleShape).background(Color(0xFF4CAF50))
+        ) {
+            Icon(Icons.Filled.Check, contentDescription = "Confirmar", tint = Color.White, modifier = Modifier.size(18.dp))
+        }
+        IconButton(
+            onClick = onRechazar,
+            modifier = Modifier.size(36.dp).clip(CircleShape).background(KddSurfaceVariant)
+        ) {
+            Icon(Icons.Filled.Close, contentDescription = "Rechazar", tint = KddTextSecondary, modifier = Modifier.size(18.dp))
+        }
+    }
+}
+
+@Composable
+private fun PresenteCard(nombre: String, edad: Int?, onClick: () -> Unit) {
+    Column(modifier = Modifier.padding(6.dp).clickable { onClick() }, horizontalAlignment = Alignment.CenterHorizontally) {
+        Box(modifier = Modifier.fillMaxWidth().aspectRatio(1f)) {
+            Box(
+                modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(8.dp)).background(KddSurfaceVariant),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(nombre.first().toString(), fontWeight = FontWeight.Bold, fontSize = 24.sp, color = KddTextSecondary)
+            }
+            Box(
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(4.dp)
+                    .size(18.dp)
+                    .clip(CircleShape)
+                    .background(Color(0xFF4CAF50)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.Check,
+                    contentDescription = "Confirmado",
+                    tint = Color.White,
+                    modifier = Modifier.size(11.dp)
+                )
+            }
         }
         Spacer(modifier = Modifier.height(4.dp))
         Text(text = nombre, style = MaterialTheme.typography.labelSmall, color = KddTextPrimary)
-        Text(text = "$edad", style = MaterialTheme.typography.labelSmall, color = KddTextHint)
+        if (edad != null) {
+            Text(text = "$edad", style = MaterialTheme.typography.labelSmall, color = KddTextHint)
+        }
     }
 }

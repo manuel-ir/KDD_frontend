@@ -8,6 +8,7 @@ import com.kdd.kdd_frontend.network.dto.MiembroComunidadDto
 import com.kdd.kdd_frontend.network.dto.CrearPlanDto
 import com.kdd.kdd_frontend.network.dto.GoogleAuthRequest
 import com.kdd.kdd_frontend.network.dto.MensajeDto
+import com.kdd.kdd_frontend.network.dto.ParticipanteDto
 import com.kdd.kdd_frontend.network.dto.PlanDto
 import com.kdd.kdd_frontend.network.dto.UsuarioDto
 import retrofit2.Response
@@ -42,6 +43,18 @@ interface ApiService {
     @POST("api/planes")
     suspend fun crearPlan(@Body body: CrearPlanDto): Response<PlanDto>
 
+    @GET("api/planes/{id}/participantes")
+    suspend fun getParticipantes(@Path("id") id: Long): Response<List<ParticipanteDto>>
+
+    @GET("api/planes/{id}/solicitudes")
+    suspend fun getSolicitudesPlan(@Path("id") id: Long): Response<List<ParticipanteDto>>
+
+    @PUT("api/planes/{id}/participantes/{usuarioId}/confirmar")
+    suspend fun confirmarParticipante(@Path("id") id: Long, @Path("usuarioId") usuarioId: Long): Response<Void>
+
+    @DELETE("api/planes/{id}/participantes/{usuarioId}")
+    suspend fun rechazarParticipante(@Path("id") id: Long, @Path("usuarioId") usuarioId: Long): Response<Void>
+
     @POST("api/planes/{id}/unirse")
     suspend fun unirseAPlan(@Path("id") id: Long): Response<Void>
 
@@ -70,6 +83,9 @@ interface ApiService {
     // Amistades
     @GET("api/amistades")
     suspend fun getAmigos(): Response<List<AmistadDto>>
+
+    @GET("api/amistades/solicitudes")
+    suspend fun getSolicitudes(): Response<List<AmistadDto>>
 
     @POST("api/amistades/{id}")
     suspend fun enviarSolicitud(@Path("id") id: Long): Response<Void>

@@ -15,6 +15,8 @@ data class PlanDto(
     val anfitrionNombre: String?,
     val anfitrionId: Long?,
     val numParticipantes: Int,
+    val numApuntados: Int = 0,
     val miembro: Boolean = false,
-    val creador: Boolean = false
+    val creador: Boolean = false,
+    val pendiente: Boolean = false
 )
