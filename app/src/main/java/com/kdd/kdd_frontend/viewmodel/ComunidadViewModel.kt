@@ -1,9 +1,12 @@
 package com.kdd.kdd_frontend.viewmodel
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
+import com.kdd.kdd_frontend.network.dto.CrearComunidadDto
 import androidx.lifecycle.viewModelScope
 import com.kdd.kdd_frontend.network.ApiClient
 import com.kdd.kdd_frontend.network.dto.ComunidadDto
+import com.kdd.kdd_frontend.network.dto.MiembroComunidadDto
 import com.kdd.kdd_frontend.ui.components.CommunityCardData
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -28,6 +31,9 @@ class ComunidadViewModel : ViewModel() {
 
     private val _detalleState = MutableStateFlow<ComunidadDetalleState>(ComunidadDetalleState.Loading)
     val detalleState: StateFlow<ComunidadDetalleState> = _detalleState
+
+    private val _miembros = MutableStateFlow<List<MiembroComunidadDto>>(emptyList())
+    val miembros: StateFlow<List<MiembroComunidadDto>> = _miembros
 
     init {
         cargarComunidades()
@@ -66,6 +72,19 @@ class ComunidadViewModel : ViewModel() {
         }
     }
 
+    fun cargarMiembros(id: Long) {
+        viewModelScope.launch {
+            try {
+                val response = ApiClient.api.getMiembrosComunidad(id)
+                if (response.isSuccessful) {
+                    _miembros.value = response.body() ?: emptyList()
+                }
+            } catch (e: Exception) {
+                Log.e("ComunidadVM", "Error cargando miembros: ${e.message}")
+            }
+        }
+    }
+
     fun unirseAComunidad(id: Long, onSuccess: () -> Unit, onError: (String) -> Unit) {
         viewModelScope.launch {
             try {
@@ -78,9 +97,22 @@ class ComunidadViewModel : ViewModel() {
         }
     }
 
+    fun abandonarComunidad(id: Long, onSuccess: () -> Unit, onError: (String) -> Unit) {
+        viewModelScope.launch {
+            try {
+                val response = ApiClient.api.abandonarComunidad(id)
+                if (response.isSuccessful) onSuccess()
+                else onError("No se pudo abandonar la comunidad")
+            } catch (e: Exception) {
+                onError("Error de conexión")
+            }
+        }
+    }
+
     fun crearComunidad(
         nombre: String,
         descripcion: String,
+        ubicacion: String,
         edadMin: Int,
         edadMax: Int,
         onSuccess: () -> Unit,
@@ -88,21 +120,25 @@ class ComunidadViewModel : ViewModel() {
     ) {
         viewModelScope.launch {
             try {
-                val body = mapOf(
-                    "nombre" to nombre,
-                    "descripcion" to descripcion,
-                    "edadMin" to edadMin,
-                    "edadMax" to edadMax
+                val body = CrearComunidadDto(
+                    nombre = nombre,
+                    descripcion = descripcion,
+                    ubicacion = ubicacion,
+                    edadMin = edadMin,
+                    edadMax = edadMax
                 )
                 val response = ApiClient.api.crearComunidad(body)
                 if (response.isSuccessful) {
                     cargarComunidades()
                     onSuccess()
                 } else {
-                    onError("Error ${response.code()}")
+                    val errorBody = response.errorBody()?.string() ?: ""
+                    Log.e("ComunidadVM", "Error ${response.code()}: $errorBody")
+                    onError("Error ${response.code()}: $errorBody")
                 }
             } catch (e: Exception) {
-                onError("No se pudo conectar con el servidor")
+                Log.e("ComunidadVM", "Excepcion: ${e.message}", e)
+                onError("Sin conexión: ${e.message}")
             }
         }
     }
@@ -113,7 +149,7 @@ fun ComunidadDto.toCommunityCardData() = CommunityCardData(
     nombre = nombre,
     edadMin = edadMin ?: 18,
     edadMax = edadMax ?: 99,
-    ubicacion = "",
+    ubicacion = ubicacion ?: "",
     numMiembros = numMiembros,
     adminNombre = adminNombre ?: ""
 )

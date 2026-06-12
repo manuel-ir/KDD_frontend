@@ -49,7 +49,6 @@ fun PlanDetailScreen(
 
     var selectedTab by remember { mutableIntStateOf(0) }
     var participanteSeleccionado by remember { mutableStateOf<ParticipanteInfo?>(null) }
-    var unidoExitoso by remember { mutableStateOf(false) }
 
     LaunchedEffect(planId) {
         viewModel.cargarDetalle(planId)
@@ -99,35 +98,53 @@ fun PlanDetailScreen(
                                 onClick = { },
                                 modifier = Modifier.size(44.dp).clip(CircleShape).background(KddSurface)
                             ) {
-                                Icon(Icons.Filled.StarBorder, contentDescription = "Favorito", tint = KddTextPrimary)
-                            }
-                            IconButton(
-                                onClick = { },
-                                modifier = Modifier.size(44.dp).clip(CircleShape).background(KddSurface)
-                            ) {
                                 Icon(Icons.Filled.Share, contentDescription = "Compartir", tint = KddTextPrimary)
                             }
-                            Button(
-                                onClick = {
-                                    if (!unidoExitoso && !participando) {
-                                        viewModel.unirseAPlan(
-                                            planId = planId,
-                                            onSuccess = { unidoExitoso = true },
-                                            onError = { }
-                                        )
+                            val esCreador = (detalleState as? PlanDetalleState.Success)?.plan?.creador == true
+                            when {
+                                esCreador -> {
+                                    Surface(
+                                        modifier = Modifier.weight(1f).height(48.dp),
+                                        shape = RoundedCornerShape(24.dp),
+                                        color = KddSurface
+                                    ) {
+                                        Box(contentAlignment = Alignment.Center) {
+                                            Text("Tu plan", color = KddTextSecondary, fontWeight = FontWeight.SemiBold)
+                                        }
                                     }
-                                },
-                                modifier = Modifier.weight(1f).height(48.dp),
-                                shape = RoundedCornerShape(24.dp),
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = if (unidoExitoso || participando) KddTextHint else KddPurple
-                                )
-                            ) {
-                                Text(
-                                    text = if (unidoExitoso || participando) "Solicitud enviada" else "Unirse",
-                                    color = Color.White,
-                                    fontWeight = FontWeight.SemiBold
-                                )
+                                }
+                                participando -> {
+                                    Button(
+                                        onClick = {
+                                            viewModel.abandonarPlan(
+                                                planId = planId,
+                                                onSuccess = { viewModel.cargarDetalle(planId) },
+                                                onError = { }
+                                            )
+                                        },
+                                        modifier = Modifier.weight(1f).height(48.dp),
+                                        shape = RoundedCornerShape(24.dp),
+                                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE53935))
+                                    ) {
+                                        Text("Abandonar plan", color = Color.White, fontWeight = FontWeight.SemiBold)
+                                    }
+                                }
+                                else -> {
+                                    Button(
+                                        onClick = {
+                                            viewModel.unirseAPlan(
+                                                planId = planId,
+                                                onSuccess = { viewModel.cargarDetalle(planId) },
+                                                onError = { }
+                                            )
+                                        },
+                                        modifier = Modifier.weight(1f).height(48.dp),
+                                        shape = RoundedCornerShape(24.dp),
+                                        colors = ButtonDefaults.buttonColors(containerColor = KddPurple)
+                                    ) {
+                                        Text("Unirse", color = Color.White, fontWeight = FontWeight.SemiBold)
+                                    }
+                                }
                             }
                         }
                     }

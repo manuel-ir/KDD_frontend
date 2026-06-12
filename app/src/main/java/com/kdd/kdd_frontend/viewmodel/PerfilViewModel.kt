@@ -44,14 +44,14 @@ class PerfilViewModel : ViewModel() {
     fun editarPerfil(
         nombre: String,
         descripcion: String,
-        edad: Int?,
+        fechaNacimiento: String?,
         onSuccess: () -> Unit,
         onError: (String) -> Unit
     ) {
         viewModelScope.launch {
             try {
                 val body = mutableMapOf<String, Any>("nombre" to nombre, "descripcion" to descripcion)
-                if (edad != null) body["edad"] = edad
+                if (!fechaNacimiento.isNullOrBlank()) body["fechaNacimiento"] = fechaNacimiento
                 val response = ApiClient.api.editarPerfil(body)
                 if (response.isSuccessful) {
                     _perfilState.value = PerfilState.Success(response.body()!!)

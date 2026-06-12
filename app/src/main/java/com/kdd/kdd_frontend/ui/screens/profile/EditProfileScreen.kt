@@ -8,6 +8,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForwardIos
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -22,7 +23,12 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.kdd.kdd_frontend.ui.theme.*
 import com.kdd.kdd_frontend.viewmodel.PerfilState
 import com.kdd.kdd_frontend.viewmodel.PerfilViewModel
+import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneOffset
+import java.time.format.DateTimeFormatter
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EditProfileScreen(
     onNavigateBack: () -> Unit
@@ -31,7 +37,7 @@ fun EditProfileScreen(
     val perfilState by viewModel.perfilState.collectAsState()
 
     var nombre by remember { mutableStateOf("") }
-    var edad by remember { mutableStateOf("") }
+    var fechaNacimiento by remember { mutableStateOf("") } // ISO YYYY-MM-DD
     var descripcion by remember { mutableStateOf("") }
     var showNombreDialog by remember { mutableStateOf(false) }
     var showDescripcionDialog by remember { mutableStateOf(false) }
@@ -41,7 +47,7 @@ fun EditProfileScreen(
             val usuario = (perfilState as PerfilState.Success).usuario
             if (nombre.isBlank()) nombre = usuario.nombre ?: ""
             if (descripcion.isBlank()) descripcion = usuario.descripcion ?: ""
-            if (edad.isBlank()) edad = usuario.edad?.toString() ?: ""
+            if (fechaNacimiento.isBlank()) fechaNacimiento = usuario.fechaNacimiento ?: ""
         }
     }
 
@@ -98,20 +104,74 @@ fun EditProfileScreen(
         Spacer(modifier = Modifier.height(28.dp))
 
         Column(modifier = Modifier.padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            EditOption(label = "Editar nombre y edad", onClick = { showNombreDialog = true })
+            EditOption(label = "Editar nombre y fecha de nacimiento", onClick = { showNombreDialog = true })
             EditOption(label = "Cambiar descripción del perfil", onClick = { showDescripcionDialog = true })
         }
     }
 
     if (showNombreDialog) {
         var tempNombre by remember { mutableStateOf(nombre) }
-        var tempEdad by remember { mutableStateOf(edad) }
+        var tempFechaNacimiento by remember { mutableStateOf(fechaNacimiento) }
+        var showDatePicker by remember { mutableStateOf(false) }
+
+        val datePickerState = rememberDatePickerState(
+            initialSelectedDateMillis = tempFechaNacimiento.takeIf { it.isNotBlank() }?.let {
+                runCatching { LocalDate.parse(it).atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli() }.getOrNull()
+            }
+        )
+
+        if (showDatePicker) {
+            DatePickerDialog(
+                onDismissRequest = { showDatePicker = false },
+                confirmButton = {
+                    TextButton(onClick = {
+                        datePickerState.selectedDateMillis?.let { millis ->
+                            val localDate = Instant.ofEpochMilli(millis).atZone(ZoneOffset.UTC).toLocalDate()
+                            tempFechaNacimiento = localDate.toString()
+                        }
+                        showDatePicker = false
+                    }) { Text("OK", color = KddPurple) }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showDatePicker = false }) { Text("Cancelar", color = KddTextSecondary) }
+                }
+            ) {
+                DatePicker(state = datePickerState)
+            }
+        }
+
         Dialog(onDismissRequest = { showNombreDialog = false }) {
             Card(shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
                 Column(modifier = Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                    Text("Editar nombre y edad", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                    OutlinedTextField(value = tempNombre, onValueChange = { tempNombre = it }, label = { Text("Nombre") }, singleLine = true, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(10.dp), colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = KddPurple, unfocusedBorderColor = KddDivider))
-                    OutlinedTextField(value = tempEdad, onValueChange = { tempEdad = it.filter { c -> c.isDigit() }.take(3) }, label = { Text("Edad") }, singleLine = true, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(10.dp), colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = KddPurple, unfocusedBorderColor = KddDivider))
+                    Text("Editar nombre y fecha de nacimiento", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    OutlinedTextField(
+                        value = tempNombre,
+                        onValueChange = { tempNombre = it },
+                        label = { Text("Nombre") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(10.dp),
+                        colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = KddPurple, unfocusedBorderColor = KddDivider)
+                    )
+                    // Selector de fecha de nacimiento
+                    OutlinedButton(
+                        onClick = { showDatePicker = true },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(10.dp),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = if (tempFechaNacimiento.isNotBlank()) KddTextPrimary else KddTextHint),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, KddDivider)
+                    ) {
+                        Icon(Icons.Filled.CalendarToday, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = if (tempFechaNacimiento.isNotBlank()) {
+                                runCatching {
+                                    LocalDate.parse(tempFechaNacimiento)
+                                        .format(DateTimeFormatter.ofPattern("dd/MM/yyyy"))
+                                }.getOrDefault(tempFechaNacimiento)
+                            } else "Seleccionar fecha de nacimiento"
+                        )
+                    }
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
                         TextButton(onClick = { showNombreDialog = false }) { Text("Cancelar", color = KddTextSecondary) }
                         Spacer(modifier = Modifier.width(8.dp))
@@ -120,10 +180,10 @@ fun EditProfileScreen(
                                 viewModel.editarPerfil(
                                     nombre = tempNombre.trim(),
                                     descripcion = descripcion,
-                                    edad = tempEdad.toIntOrNull(),
+                                    fechaNacimiento = tempFechaNacimiento.ifBlank { null },
                                     onSuccess = {
                                         nombre = tempNombre.trim()
-                                        edad = tempEdad
+                                        fechaNacimiento = tempFechaNacimiento
                                         showNombreDialog = false
                                     },
                                     onError = { showNombreDialog = false }
@@ -144,7 +204,14 @@ fun EditProfileScreen(
             Card(shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
                 Column(modifier = Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
                     Text("Descripción del perfil", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                    OutlinedTextField(value = tempDesc, onValueChange = { if (it.length <= 200) tempDesc = it }, placeholder = { Text("Cuéntanos algo sobre ti...", color = KddTextHint) }, modifier = Modifier.fillMaxWidth().height(120.dp), shape = RoundedCornerShape(10.dp), colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = KddPurple, unfocusedBorderColor = KddDivider))
+                    OutlinedTextField(
+                        value = tempDesc,
+                        onValueChange = { if (it.length <= 200) tempDesc = it },
+                        placeholder = { Text("Cuéntanos algo sobre ti...", color = KddTextHint) },
+                        modifier = Modifier.fillMaxWidth().height(120.dp),
+                        shape = RoundedCornerShape(10.dp),
+                        colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = KddPurple, unfocusedBorderColor = KddDivider)
+                    )
                     Text("${tempDesc.length}/200", style = MaterialTheme.typography.labelSmall, color = KddTextHint, modifier = Modifier.align(Alignment.End))
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
                         TextButton(onClick = { showDescripcionDialog = false }) { Text("Cancelar", color = KddTextSecondary) }
@@ -154,7 +221,7 @@ fun EditProfileScreen(
                                 viewModel.editarPerfil(
                                     nombre = nombre,
                                     descripcion = tempDesc,
-                                    edad = edad.toIntOrNull(),
+                                    fechaNacimiento = fechaNacimiento.ifBlank { null },
                                     onSuccess = {
                                         descripcion = tempDesc
                                         showDescripcionDialog = false

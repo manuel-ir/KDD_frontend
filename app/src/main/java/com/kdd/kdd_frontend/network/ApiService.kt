@@ -3,6 +3,8 @@ package com.kdd.kdd_frontend.network
 import com.kdd.kdd_frontend.network.dto.AmistadDto
 import com.kdd.kdd_frontend.network.dto.AuthResponse
 import com.kdd.kdd_frontend.network.dto.ComunidadDto
+import com.kdd.kdd_frontend.network.dto.CrearComunidadDto
+import com.kdd.kdd_frontend.network.dto.MiembroComunidadDto
 import com.kdd.kdd_frontend.network.dto.CrearPlanDto
 import com.kdd.kdd_frontend.network.dto.GoogleAuthRequest
 import com.kdd.kdd_frontend.network.dto.MensajeDto
@@ -25,7 +27,7 @@ interface ApiService {
     suspend fun getMiPerfil(): Response<UsuarioDto>
 
     @PUT("api/usuarios/me")
-    suspend fun editarPerfil(@Body body: Map<String, Any>): Response<UsuarioDto>
+    suspend fun editarPerfil(@Body body: Map<String, @JvmSuppressWildcards Any>): Response<UsuarioDto>
 
     // Planes
     @GET("api/planes")
@@ -54,10 +56,16 @@ interface ApiService {
     suspend fun getComunidad(@Path("id") id: Long): Response<ComunidadDto>
 
     @POST("api/comunidades")
-    suspend fun crearComunidad(@Body body: Map<String, Any>): Response<ComunidadDto>
+    suspend fun crearComunidad(@Body body: CrearComunidadDto): Response<ComunidadDto>
 
     @POST("api/comunidades/{id}/unirse")
     suspend fun unirseAComunidad(@Path("id") id: Long): Response<Void>
+
+    @DELETE("api/comunidades/{id}/abandonar")
+    suspend fun abandonarComunidad(@Path("id") id: Long): Response<Void>
+
+    @GET("api/comunidades/{id}/miembros")
+    suspend fun getMiembrosComunidad(@Path("id") id: Long): Response<List<MiembroComunidadDto>>
 
     // Amistades
     @GET("api/amistades")
@@ -81,5 +89,5 @@ interface ApiService {
 
     // Valoraciones
     @POST("api/valoraciones")
-    suspend fun valorar(@Body body: Map<String, Any>): Response<Void>
+    suspend fun valorar(@Body body: Map<String, @JvmSuppressWildcards Any>): Response<Void>
 }

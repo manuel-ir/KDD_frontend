@@ -6,5 +6,6 @@ data class UsuarioDto(
     val email: String,
     val fotoPerfil: String?,
     val descripcion: String?,
-    val edad: Int?
+    val edad: Int?,
+    val fechaNacimiento: String? = null // ISO YYYY-MM-DD
 )

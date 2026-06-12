@@ -42,14 +42,25 @@ fun CreateCommunityScreen(
     var descripcion by remember { mutableStateOf("") }
     var showCategoriasDialog by remember { mutableStateOf(false) }
     var cargando by remember { mutableStateOf(false) }
+    var errorMsg by remember { mutableStateOf<String?>(null) }
 
-    val formValido = titulo.isNotBlank() && ubicacion.isNotBlank() &&
+    val formValido = titulo.isNotBlank() &&
             categoria.isNotBlank() && (categoria != "Personalizada" || categoriaPersonalizada.isNotBlank())
 
+    val snackbarHostState = remember { SnackbarHostState() }
+    androidx.compose.runtime.LaunchedEffect(errorMsg) {
+        errorMsg?.let {
+            snackbarHostState.showSnackbar(it)
+            errorMsg = null
+        }
+    }
+
+    Scaffold(snackbarHost = { SnackbarHost(snackbarHostState) }) { innerPadding ->
     Column(
         modifier = Modifier
             .fillMaxSize()
             .background(Color.White)
+            .padding(innerPadding)
     ) {
         // Barra superior
         Surface(shadowElevation = 2.dp) {
@@ -253,10 +264,14 @@ fun CreateCommunityScreen(
                             viewModel.crearComunidad(
                                 nombre = nombreFinal,
                                 descripcion = descripcionFinal,
+                                ubicacion = ubicacion.trim(),
                                 edadMin = edadMin.toInt(),
                                 edadMax = edadMax.toInt(),
                                 onSuccess = { onCommunityCreated() },
-                                onError = { cargando = false }
+                                onError = { msg ->
+                                    cargando = false
+                                    errorMsg = msg
+                                }
                             )
                         }
                     },
@@ -323,6 +338,7 @@ fun CreateCommunityScreen(
             }
         }
     }
+    } // cierre Scaffold
 }
 
 @Composable

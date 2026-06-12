@@ -80,7 +80,9 @@ class PlanViewModel : ViewModel() {
             try {
                 val response = ApiClient.api.getPlan(planId)
                 if (response.isSuccessful) {
-                    _detalleState.value = PlanDetalleState.Success(response.body()!!)
+                    val plan = response.body()!!
+                    _detalleState.value = PlanDetalleState.Success(plan)
+                    _participando.value = plan.miembro
                 } else {
                     _detalleState.value = PlanDetalleState.Error("Error ${response.code()}")
                 }
