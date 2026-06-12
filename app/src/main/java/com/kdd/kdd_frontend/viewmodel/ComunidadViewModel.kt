@@ -1,15 +1,18 @@
 package com.kdd.kdd_frontend.viewmodel
 
+import android.app.Application
 import android.util.Log
-import androidx.lifecycle.ViewModel
-import com.kdd.kdd_frontend.network.dto.CrearComunidadDto
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.kdd.kdd_frontend.data.TokenDataStore
 import com.kdd.kdd_frontend.network.ApiClient
 import com.kdd.kdd_frontend.network.dto.ComunidadDto
+import com.kdd.kdd_frontend.network.dto.CrearComunidadDto
 import com.kdd.kdd_frontend.network.dto.MiembroComunidadDto
 import com.kdd.kdd_frontend.ui.components.CommunityCardData
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
 sealed class ComunidadesState {
@@ -24,7 +27,9 @@ sealed class ComunidadDetalleState {
     data class Error(val mensaje: String) : ComunidadDetalleState()
 }
 
-class ComunidadViewModel : ViewModel() {
+class ComunidadViewModel(application: Application) : AndroidViewModel(application) {
+
+    private val context = application.applicationContext
 
     private val _comunidadesState = MutableStateFlow<ComunidadesState>(ComunidadesState.Loading)
     val comunidadesState: StateFlow<ComunidadesState> = _comunidadesState
@@ -35,7 +40,13 @@ class ComunidadViewModel : ViewModel() {
     private val _miembros = MutableStateFlow<List<MiembroComunidadDto>>(emptyList())
     val miembros: StateFlow<List<MiembroComunidadDto>> = _miembros
 
+    var miUserId: Long = -1L
+        private set
+
     init {
+        viewModelScope.launch {
+            miUserId = TokenDataStore.getUserId(context).first() ?: -1L
+        }
         cargarComunidades()
     }
 
@@ -103,6 +114,18 @@ class ComunidadViewModel : ViewModel() {
                 val response = ApiClient.api.abandonarComunidad(id)
                 if (response.isSuccessful) onSuccess()
                 else onError("No se pudo abandonar la comunidad")
+            } catch (e: Exception) {
+                onError("Error de conexión")
+            }
+        }
+    }
+
+    fun enviarSolicitudAmistad(destinatarioId: Long, onSuccess: () -> Unit, onError: (String) -> Unit) {
+        viewModelScope.launch {
+            try {
+                val response = ApiClient.api.enviarSolicitud(destinatarioId)
+                if (response.isSuccessful) onSuccess()
+                else onError("No se pudo enviar la solicitud")
             } catch (e: Exception) {
                 onError("Error de conexión")
             }

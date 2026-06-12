@@ -18,6 +18,12 @@ sealed class AmigosState {
     data class Error(val mensaje: String) : AmigosState()
 }
 
+sealed class SolicitudesState {
+    object Loading : SolicitudesState()
+    data class Success(val solicitudes: List<AmistadDto>) : SolicitudesState()
+    data class Error(val mensaje: String) : SolicitudesState()
+}
+
 sealed class MensajesState {
     object Loading : MensajesState()
     data class Success(val mensajes: List<MensajeDto>) : MensajesState()
@@ -31,6 +37,9 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
     private val _amigosState = MutableStateFlow<AmigosState>(AmigosState.Loading)
     val amigosState: StateFlow<AmigosState> = _amigosState
 
+    private val _solicitudesState = MutableStateFlow<SolicitudesState>(SolicitudesState.Success(emptyList()))
+    val solicitudesState: StateFlow<SolicitudesState> = _solicitudesState
+
     private val _mensajesState = MutableStateFlow<MensajesState>(MensajesState.Loading)
     val mensajesState: StateFlow<MensajesState> = _mensajesState
 
@@ -39,9 +48,12 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
 
     init {
         viewModelScope.launch {
+            val token = TokenDataStore.getToken(context).first()
+            if (token != null) ApiClient.jwtToken = token
             miUserId = TokenDataStore.getUserId(context).first() ?: -1L
+            cargarAmigos()
+            cargarSolicitudes()
         }
-        cargarAmigos()
     }
 
     fun cargarAmigos() {
@@ -57,6 +69,42 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
             } catch (e: Exception) {
                 _amigosState.value = AmigosState.Error("No se pudo conectar con el servidor")
             }
+        }
+    }
+
+    fun cargarSolicitudes() {
+        viewModelScope.launch {
+            try {
+                val response = ApiClient.api.getSolicitudes()
+                if (response.isSuccessful) {
+                    _solicitudesState.value = SolicitudesState.Success(response.body() ?: emptyList())
+                } else {
+                    _solicitudesState.value = SolicitudesState.Success(emptyList())
+                }
+            } catch (e: Exception) {
+                _solicitudesState.value = SolicitudesState.Success(emptyList())
+            }
+        }
+    }
+
+    fun aceptarSolicitud(solicitanteId: Long) {
+        viewModelScope.launch {
+            try {
+                val response = ApiClient.api.aceptarAmistad(solicitanteId)
+                if (response.isSuccessful) {
+                    cargarAmigos()
+                    cargarSolicitudes()
+                }
+            } catch (e: Exception) { /* silencioso */ }
+        }
+    }
+
+    fun rechazarSolicitud(solicitanteId: Long) {
+        viewModelScope.launch {
+            try {
+                ApiClient.api.eliminarAmistad(solicitanteId)
+                cargarSolicitudes()
+            } catch (e: Exception) { /* silencioso */ }
         }
     }
 

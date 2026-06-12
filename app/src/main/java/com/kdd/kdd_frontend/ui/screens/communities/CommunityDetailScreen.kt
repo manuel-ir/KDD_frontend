@@ -8,6 +8,10 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -270,7 +274,17 @@ fun CommunityDetailScreen(
                                 }
                             } else {
                                 items(miembros) { miembro ->
-                                    MemberCard(miembro)
+                                    MemberCard(
+                                        miembro = miembro,
+                                        esSoyYo = miembro.id == viewModel.miUserId,
+                                        onAnadirAmigo = { id ->
+                                            viewModel.enviarSolicitudAmistad(
+                                                destinatarioId = id,
+                                                onSuccess = {},
+                                                onError = {}
+                                            )
+                                        }
+                                    )
                                 }
                             }
                         }
@@ -304,7 +318,13 @@ private fun CommunityInfoRow(icon: ImageVector, label: String, value: String) {
 }
 
 @Composable
-private fun MemberCard(miembro: MiembroComunidadDto) {
+private fun MemberCard(
+    miembro: MiembroComunidadDto,
+    esSoyYo: Boolean,
+    onAnadirAmigo: (Long) -> Unit
+) {
+    var solicitudEnviada by remember { mutableStateOf(false) }
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -339,6 +359,24 @@ private fun MemberCard(miembro: MiembroComunidadDto) {
             Text(miembro.nombre, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold, color = KddTextPrimary)
             if (miembro.edad != null) {
                 Text("${miembro.edad} años", style = MaterialTheme.typography.bodySmall, color = KddTextHint)
+            }
+        }
+        if (!esSoyYo) {
+            IconButton(
+                onClick = {
+                    if (!solicitudEnviada) {
+                        solicitudEnviada = true
+                        onAnadirAmigo(miembro.id)
+                    }
+                },
+                modifier = Modifier.size(36.dp)
+            ) {
+                Icon(
+                    imageVector = if (solicitudEnviada) Icons.Filled.Check else Icons.Filled.PersonAdd,
+                    contentDescription = if (solicitudEnviada) "Solicitud enviada" else "Añadir amigo",
+                    tint = if (solicitudEnviada) KddTextHint else KddPurple,
+                    modifier = Modifier.size(20.dp)
+                )
             }
         }
     }
