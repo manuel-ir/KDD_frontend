@@ -9,6 +9,9 @@ import com.kdd.kdd_frontend.network.ApiClient
 import com.kdd.kdd_frontend.network.dto.ComunidadDto
 import com.kdd.kdd_frontend.network.dto.CrearComunidadDto
 import com.kdd.kdd_frontend.network.dto.MiembroComunidadDto
+import com.kdd.kdd_frontend.network.dto.PlanDto
+import com.kdd.kdd_frontend.ui.components.PlanCardData
+import com.kdd.kdd_frontend.viewmodel.toPlanCardData
 import com.kdd.kdd_frontend.ui.components.CommunityCardData
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -39,6 +42,9 @@ class ComunidadViewModel(application: Application) : AndroidViewModel(applicatio
 
     private val _miembros = MutableStateFlow<List<MiembroComunidadDto>>(emptyList())
     val miembros: StateFlow<List<MiembroComunidadDto>> = _miembros
+
+    private val _planesComunidad = MutableStateFlow<List<PlanCardData>>(emptyList())
+    val planesComunidad: StateFlow<List<PlanCardData>> = _planesComunidad
 
     var miUserId: Long = -1L
         private set
@@ -93,6 +99,17 @@ class ComunidadViewModel(application: Application) : AndroidViewModel(applicatio
             } catch (e: Exception) {
                 Log.e("ComunidadVM", "Error cargando miembros: ${e.message}")
             }
+        }
+    }
+
+    fun cargarPlanesComunidad(id: Long) {
+        viewModelScope.launch {
+            try {
+                val response = ApiClient.api.getPlanesComunidad(id)
+                if (response.isSuccessful) {
+                    _planesComunidad.value = response.body()?.map { it.toPlanCardData() } ?: emptyList()
+                }
+            } catch (e: Exception) { /* silencioso */ }
         }
     }
 

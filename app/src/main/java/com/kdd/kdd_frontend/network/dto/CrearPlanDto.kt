@@ -12,5 +12,6 @@ data class CrearPlanDto(
     val numMaxPersonas: Int,
     val idioma: String?,
     val latitud: Double? = null,
-    val longitud: Double? = null
+    val longitud: Double? = null,
+    val comunidadId: Long? = null
 )

@@ -51,7 +51,8 @@ val EU_LANGUAGES = listOf(
 @Composable
 fun CreatePlanScreen(
     onNavigateBack: () -> Unit,
-    onPlanCreated: () -> Unit
+    onPlanCreated: () -> Unit,
+    communityId: Long = -1L
 ) {
     val viewModel: PlanViewModel = viewModel()
     var cargando by remember { mutableStateOf(false) }
@@ -318,6 +319,7 @@ fun CreatePlanScreen(
                                 ubicacionTexto = ubicacionNombre.ifBlank { null },
                                 latitud = selectedLatLng?.latitude,
                                 longitud = selectedLatLng?.longitude,
+                                comunidadId = if (communityId > 0) communityId else null,
                                 edadMin = edadMin.toInt(),
                                 edadMax = edadMax.toInt(),
                                 numMaxPersonas = (vasAcompanado + maxAcompanantes).toInt(),

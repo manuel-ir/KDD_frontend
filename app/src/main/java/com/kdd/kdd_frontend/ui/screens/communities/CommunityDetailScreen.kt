@@ -26,6 +26,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.kdd.kdd_frontend.network.dto.MiembroComunidadDto
+import com.kdd.kdd_frontend.ui.components.PlanCard
 import com.kdd.kdd_frontend.ui.components.*
 import com.kdd.kdd_frontend.ui.theme.*
 import com.kdd.kdd_frontend.viewmodel.ComunidadDetalleState
@@ -35,11 +36,13 @@ import com.kdd.kdd_frontend.viewmodel.ComunidadViewModel
 fun CommunityDetailScreen(
     communityId: Long,
     onNavigateBack: () -> Unit,
-    onNavigateToPlan: (Long) -> Unit
+    onNavigateToPlan: (Long) -> Unit,
+    onNavigateToCreatePlan: () -> Unit = {}
 ) {
     val viewModel: ComunidadViewModel = viewModel()
     val detalleState by viewModel.detalleState.collectAsState()
     val miembros by viewModel.miembros.collectAsState()
+    val planesComunidad by viewModel.planesComunidad.collectAsState()
 
     var selectedTab by remember { mutableIntStateOf(0) }
     val tabs = listOf("Información", "Actividades", "Miembros")
@@ -55,6 +58,7 @@ fun CommunityDetailScreen(
     }
 
     LaunchedEffect(selectedTab) {
+        if (selectedTab == 1) viewModel.cargarPlanesComunidad(communityId)
         if (selectedTab == 2) viewModel.cargarMiembros(communityId)
     }
 
@@ -81,15 +85,15 @@ fun CommunityDetailScreen(
                         }
                         when {
                             comunidad.admin -> {
-                                // Eres el admin — sin botón de unirse/abandonar
-                                Surface(
+                                Button(
+                                    onClick = onNavigateToCreatePlan,
                                     modifier = Modifier.weight(1f).height(48.dp),
                                     shape = RoundedCornerShape(24.dp),
-                                    color = KddSurface
+                                    colors = ButtonDefaults.buttonColors(containerColor = KddPurple)
                                 ) {
-                                    Box(contentAlignment = Alignment.Center) {
-                                        Text("Eres el admin", color = KddTextSecondary, fontWeight = FontWeight.SemiBold)
-                                    }
+                                    Icon(Icons.Filled.Add, contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp))
+                                    Spacer(Modifier.width(6.dp))
+                                    Text("Añadir actividad", color = Color.White, fontWeight = FontWeight.SemiBold)
                                 }
                             }
                             comunidad.miembro -> {
@@ -249,14 +253,21 @@ fun CommunityDetailScreen(
                             }
                         }
                         1 -> {
-                            item {
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(32.dp),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Text("Sin actividades todavía", style = MaterialTheme.typography.bodyMedium, color = KddTextSecondary)
+                            if (planesComunidad.isEmpty()) {
+                                item {
+                                    Box(
+                                        modifier = Modifier.fillMaxWidth().padding(32.dp),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text("Sin actividades todavía", style = MaterialTheme.typography.bodyMedium, color = KddTextSecondary)
+                                    }
+                                }
+                            } else {
+                                items(planesComunidad) { plan ->
+                                    PlanCard(
+                                        data = plan,
+                                        onClick = { onNavigateToPlan(plan.id) }
+                                    )
                                 }
                             }
                         }

@@ -25,6 +25,9 @@ sealed class Screen(val route: String) {
 
     // Crear
     object CreatePlan : Screen("create_plan")
+    object CreatePlanForCommunity : Screen("create_plan/{communityId}") {
+        fun createRoute(communityId: Long) = "create_plan/$communityId"
+    }
     object CreateCommunity : Screen("create_community")
 
     // Chat
