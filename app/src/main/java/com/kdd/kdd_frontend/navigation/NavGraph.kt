@@ -51,7 +51,8 @@ fun NavGraph(navController: NavHostController) {
                 onNavigateToCreatePlan = { navController.navigate(Screen.CreatePlan.route) },
                 onNavigateToCreateCommunity = { navController.navigate(Screen.CreateCommunity.route) },
                 onNavigateToChats = { navController.navigate(Screen.Chats.route) },
-                onNavigateToAccount = { navController.navigate(Screen.Account.route) }
+                onNavigateToAccount = { navController.navigate(Screen.Account.route) },
+                onNavigateToPlan = { planId -> navController.navigate(Screen.PlanDetail.createRoute(planId)) }
             )
         }
 

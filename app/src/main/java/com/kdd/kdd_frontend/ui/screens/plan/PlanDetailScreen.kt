@@ -23,6 +23,9 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.kdd.kdd_frontend.network.dto.ParticipanteDto
+import com.google.android.gms.maps.model.CameraPosition
+import com.google.android.gms.maps.model.LatLng
+import com.google.maps.android.compose.*
 import com.kdd.kdd_frontend.ui.theme.*
 import com.kdd.kdd_frontend.viewmodel.PlanDetalleState
 import com.kdd.kdd_frontend.viewmodel.PlanViewModel
@@ -249,13 +252,39 @@ fun PlanDetailScreen(
                                     if (!plan.idioma.isNullOrBlank()) {
                                         PlanInfoRow(icon = Icons.Filled.Translate, label = "Idioma", value = plan.idioma)
                                     }
-                                    Box(
-                                        modifier = Modifier.fillMaxWidth().height(160.dp).clip(RoundedCornerShape(12.dp)).background(Color(0xFFE8EAF0)),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                            Icon(Icons.Filled.Map, contentDescription = null, tint = KddPurple.copy(alpha = 0.4f), modifier = Modifier.size(40.dp))
-                                            Text("Google Maps", color = KddTextHint, style = MaterialTheme.typography.bodySmall)
+                                    if (plan.latitud != null && plan.longitud != null) {
+                                        val planLatLng = LatLng(plan.latitud, plan.longitud)
+                                        val cameraState = rememberCameraPositionState {
+                                            position = CameraPosition.fromLatLngZoom(planLatLng, 14f)
+                                        }
+                                        Box(
+                                            modifier = Modifier.fillMaxWidth().height(160.dp).clip(RoundedCornerShape(12.dp))
+                                        ) {
+                                            GoogleMap(
+                                                modifier = Modifier.fillMaxSize(),
+                                                cameraPositionState = cameraState,
+                                                uiSettings = MapUiSettings(
+                                                    zoomControlsEnabled = false,
+                                                    scrollGesturesEnabled = false,
+                                                    zoomGesturesEnabled = false,
+                                                    myLocationButtonEnabled = false
+                                                )
+                                            ) {
+                                                Marker(
+                                                    state = rememberMarkerState(position = planLatLng),
+                                                    title = plan.titulo
+                                                )
+                                            }
+                                        }
+                                    } else {
+                                        Box(
+                                            modifier = Modifier.fillMaxWidth().height(160.dp).clip(RoundedCornerShape(12.dp)).background(Color(0xFFE8EAF0)),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                                Icon(Icons.Filled.Map, contentDescription = null, tint = KddPurple.copy(alpha = 0.4f), modifier = Modifier.size(40.dp))
+                                                Text("Sin ubicación", color = KddTextHint, style = MaterialTheme.typography.bodySmall)
+                                            }
                                         }
                                     }
                                 }

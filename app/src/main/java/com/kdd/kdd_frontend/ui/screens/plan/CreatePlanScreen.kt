@@ -29,6 +29,10 @@ import com.kdd.kdd_frontend.viewmodel.PlanViewModel
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
+import androidx.compose.ui.window.DialogProperties
+import com.google.android.gms.maps.model.CameraPosition
+import com.google.android.gms.maps.model.LatLng
+import com.google.maps.android.compose.*
 
 val CATEGORIAS_PREDEFINIDAS = listOf(
     "Deportes", "Naturaleza", "Fiesta", "Música", "Arte y Cultura",
@@ -76,6 +80,9 @@ fun CreatePlanScreen(
     var showTimeHastaDialog by remember { mutableStateOf(false) }
     var showIdiomasDialog by remember { mutableStateOf(false) }
     var showCategoriasDialog by remember { mutableStateOf(false) }
+    var showLocationPicker by remember { mutableStateOf(false) }
+    var selectedLatLng by remember { mutableStateOf<LatLng?>(null) }
+    var ubicacionNombre by remember { mutableStateOf("") }
 
     val dateFormatter = DateTimeFormatter.ofPattern("dd/MM/yy")
     val timeFormatter = DateTimeFormatter.ofPattern("HH:mm")
@@ -207,12 +214,17 @@ fun CreatePlanScreen(
             // ¿Dónde?
             Text("¿Dónde?", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = KddTextPrimary)
             Button(
-                onClick = { /* TODO: seleccionar ubicación */ },
+                onClick = { showLocationPicker = true },
                 colors = ButtonDefaults.buttonColors(containerColor = KddPurple),
                 shape = RoundedCornerShape(20.dp),
                 modifier = Modifier.height(42.dp)
             ) {
-                Text("Elige una ubicación", color = Color.White)
+                Text(
+                    if (selectedLatLng != null && ubicacionNombre.isNotBlank()) ubicacionNombre
+                    else if (selectedLatLng != null) "Ubicación seleccionada ✓"
+                    else "Elige una ubicación",
+                    color = Color.White
+                )
             }
 
             // Foto
@@ -303,7 +315,9 @@ fun CreatePlanScreen(
                                 categoria = categoriaFinal,
                                 fechaEvento = fechaDesde?.format(apiFormatter),
                                 horaEvento = horaDesde?.format(DateTimeFormatter.ofPattern("HH:mm:ss")),
-                                ubicacionTexto = null,
+                                ubicacionTexto = ubicacionNombre.ifBlank { null },
+                                latitud = selectedLatLng?.latitude,
+                                longitud = selectedLatLng?.longitude,
                                 edadMin = edadMin.toInt(),
                                 edadMax = edadMax.toInt(),
                                 numMaxPersonas = (vasAcompanado + maxAcompanantes).toInt(),
@@ -422,6 +436,81 @@ fun CreatePlanScreen(
                     Spacer(modifier = Modifier.height(8.dp))
                     TextButton(onClick = { showCategoriasDialog = false }, modifier = Modifier.align(Alignment.End)) {
                         Text("Cancelar", color = KddTextSecondary)
+                    }
+                }
+            }
+        }
+    }
+
+    // ─── Location Picker ───
+    if (showLocationPicker) {
+        val pickerCamera = rememberCameraPositionState {
+            position = CameraPosition.fromLatLngZoom(
+                selectedLatLng ?: LatLng(40.4168, -3.7038), 10f
+            )
+        }
+        var tempNombre by remember { mutableStateOf(ubicacionNombre) }
+
+        Dialog(
+            onDismissRequest = { showLocationPicker = false },
+            properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)
+        ) {
+            Box(modifier = Modifier.fillMaxSize()) {
+                GoogleMap(
+                    modifier = Modifier.fillMaxSize(),
+                    cameraPositionState = pickerCamera,
+                    uiSettings = MapUiSettings(zoomControlsEnabled = true, myLocationButtonEnabled = false)
+                ) {
+                    val target = pickerCamera.position.target
+                    Marker(
+                        state = rememberMarkerState(position = target),
+                        title = "Ubicación seleccionada"
+                    )
+                }
+
+                // Crosshair central
+                Icon(
+                    imageVector = Icons.Filled.LocationOn,
+                    contentDescription = null,
+                    tint = KddPurple,
+                    modifier = Modifier.size(40.dp).align(Alignment.Center).offset(y = (-20).dp)
+                )
+
+                // Panel inferior
+                Card(
+                    modifier = Modifier.fillMaxWidth().align(Alignment.BottomCenter).padding(12.dp),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color.White),
+                    elevation = CardDefaults.cardElevation(8.dp)
+                ) {
+                    Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Text("Arrastra el mapa para posicionar el marcador", style = MaterialTheme.typography.bodySmall, color = KddTextSecondary)
+                        OutlinedTextField(
+                            value = tempNombre,
+                            onValueChange = { tempNombre = it },
+                            placeholder = { Text("Nombre del lugar (opcional)", color = KddTextHint) },
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = true,
+                            shape = RoundedCornerShape(10.dp),
+                            colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = KddPurple, unfocusedBorderColor = KddDivider)
+                        )
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            OutlinedButton(
+                                onClick = { showLocationPicker = false },
+                                modifier = Modifier.weight(1f),
+                                shape = RoundedCornerShape(10.dp)
+                            ) { Text("Cancelar") }
+                            Button(
+                                onClick = {
+                                    selectedLatLng = pickerCamera.position.target
+                                    ubicacionNombre = tempNombre
+                                    showLocationPicker = false
+                                },
+                                modifier = Modifier.weight(1f),
+                                shape = RoundedCornerShape(10.dp),
+                                colors = ButtonDefaults.buttonColors(containerColor = KddPurple)
+                            ) { Text("Confirmar", color = Color.White) }
+                        }
                     }
                 }
             }

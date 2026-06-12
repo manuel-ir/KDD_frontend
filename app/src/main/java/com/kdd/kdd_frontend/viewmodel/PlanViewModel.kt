@@ -241,6 +241,8 @@ fun PlanDto.toPlanCardData(): PlanCardData {
         hora = hora,
         distanciaKm = "",
         ubicacion = ubicacionTexto,
-        anfitrionNombre = anfitrionNombre ?: ""
+        anfitrionNombre = anfitrionNombre ?: "",
+        latitud = latitud,
+        longitud = longitud
     )
 }

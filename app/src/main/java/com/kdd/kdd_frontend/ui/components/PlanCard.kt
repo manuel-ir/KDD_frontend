@@ -31,7 +31,9 @@ data class PlanCardData(
     val ubicacion: String? = null,
     val fotoUrl: String? = null,
     val anfitrionNombre: String,
-    val anfitrionFotoUrl: String? = null
+    val anfitrionFotoUrl: String? = null,
+    val latitud: Double? = null,
+    val longitud: Double? = null
 )
 
 @Composable

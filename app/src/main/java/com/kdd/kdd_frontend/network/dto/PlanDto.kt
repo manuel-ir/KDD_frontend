@@ -14,6 +14,8 @@ data class PlanDto(
     val idioma: String?,
     val anfitrionNombre: String?,
     val anfitrionId: Long?,
+    val latitud: Double? = null,
+    val longitud: Double? = null,
     val numParticipantes: Int,
     val numApuntados: Int = 0,
     val miembro: Boolean = false,
