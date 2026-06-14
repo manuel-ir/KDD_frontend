@@ -40,7 +40,6 @@ fun AccountScreen(
             .fillMaxSize()
             .background(KddSurface)
     ) {
-        // Barra superior
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -50,22 +49,12 @@ fun AccountScreen(
             verticalAlignment = Alignment.CenterVertically
         ) {
             IconButton(onClick = onNavigateBack) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = "Volver",
-                    tint = KddTextPrimary
-                )
+                Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Volver", tint = KddTextPrimary)
             }
-            Text(
-                text = "Cuenta",
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(start = 8.dp)
-            )
+            Text(text = "Cuenta", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = 8.dp))
         }
 
         HorizontalDivider()
-
         Spacer(modifier = Modifier.height(16.dp))
 
         when (val state = perfilState) {
@@ -82,11 +71,8 @@ fun AccountScreen(
             is PerfilState.Success -> {
                 val usuario = state.usuario
 
-                // Card de perfil
                 Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp),
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
                     shape = RoundedCornerShape(16.dp),
                     colors = CardDefaults.cardColors(containerColor = Color.White)
                 ) {
@@ -96,10 +82,7 @@ fun AccountScreen(
                         horizontalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
                         Box(
-                            modifier = Modifier
-                                .size(56.dp)
-                                .clip(CircleShape)
-                                .background(KddPurple),
+                            modifier = Modifier.size(56.dp).clip(CircleShape).background(KddPurple),
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
@@ -109,35 +92,18 @@ fun AccountScreen(
                                 style = MaterialTheme.typography.titleLarge
                             )
                         }
-
                         Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = usuario.nombre,
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = KddTextPrimary
-                            )
-                            Text(
-                                text = usuario.email,
-                                style = MaterialTheme.typography.bodySmall,
-                                color = KddTextSecondary
-                            )
+                            Text(text = usuario.nombre, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = KddTextPrimary)
+                            Text(text = usuario.email, style = MaterialTheme.typography.bodySmall, color = KddTextSecondary)
                             Spacer(modifier = Modifier.height(6.dp))
-                            Surface(
-                                shape = RoundedCornerShape(6.dp),
-                                color = KddSuccess.copy(alpha = 0.12f)
-                            ) {
+                            Surface(shape = RoundedCornerShape(6.dp), color = KddSuccess.copy(alpha = 0.12f)) {
                                 Row(
                                     modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
                                     verticalAlignment = Alignment.CenterVertically,
                                     horizontalArrangement = Arrangement.spacedBy(4.dp)
                                 ) {
                                     Icon(Icons.Filled.CheckCircle, contentDescription = null, tint = KddSuccess, modifier = Modifier.size(12.dp))
-                                    Text(
-                                        text = "Vinculado con Google",
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = KddSuccess
-                                    )
+                                    Text(text = "Vinculado con Google", style = MaterialTheme.typography.labelSmall, color = KddSuccess)
                                 }
                             }
                         }
@@ -146,32 +112,16 @@ fun AccountScreen(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Opciones
                 Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp),
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
                     shape = RoundedCornerShape(16.dp),
                     colors = CardDefaults.cardColors(containerColor = Color.White)
                 ) {
-                    AccountOption(
-                        icon = Icons.Filled.Edit,
-                        label = "Editar perfil",
-                        onClick = onNavigateToEditProfile
-                    )
+                    AccountOption(icon = Icons.Filled.Edit, label = "Editar perfil", onClick = onNavigateToEditProfile)
                     HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
-                    AccountOption(
-                        icon = Icons.Filled.Settings,
-                        label = "Ajustes",
-                        onClick = { }
-                    )
+                    AccountOption(icon = Icons.Filled.Settings, label = "Ajustes", onClick = { })
                     HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
-                    AccountOption(
-                        icon = Icons.AutoMirrored.Filled.Logout,
-                        label = "Cerrar sesión",
-                        tint = KddError,
-                        onClick = { showLogoutDialog = true }
-                    )
+                    AccountOption(icon = Icons.AutoMirrored.Filled.Logout, label = "Cerrar sesión", tint = KddError, onClick = { showLogoutDialog = true })
                 }
             }
         }
@@ -186,14 +136,10 @@ fun AccountScreen(
                 TextButton(onClick = {
                     showLogoutDialog = false
                     viewModel.cerrarSesion(context, onLogout)
-                }) {
-                    Text("Cerrar sesión", color = KddError)
-                }
+                }) { Text("Cerrar sesión", color = KddError) }
             },
             dismissButton = {
-                TextButton(onClick = { showLogoutDialog = false }) {
-                    Text("Cancelar")
-                }
+                TextButton(onClick = { showLogoutDialog = false }) { Text("Cancelar") }
             }
         )
     }
@@ -212,9 +158,7 @@ private fun AccountOption(
         shape = RoundedCornerShape(0.dp)
     ) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 16.dp),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 16.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {

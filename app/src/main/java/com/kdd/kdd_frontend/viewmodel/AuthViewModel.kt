@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.kdd.kdd_frontend.data.TokenDataStore
 import com.kdd.kdd_frontend.network.ApiClient
 import com.kdd.kdd_frontend.network.dto.GoogleAuthRequest
+import com.kdd.kdd_frontend.network.dto.UsuarioDto
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -22,7 +23,9 @@ class AuthViewModel : ViewModel() {
     private val _authState = MutableStateFlow<AuthState>(AuthState.Idle)
     val authState: StateFlow<AuthState> = _authState
 
-    // Llamado cuando Google Sign-In devuelve el idToken
+    private val _usuario = MutableStateFlow<UsuarioDto?>(null)
+    val usuario: StateFlow<UsuarioDto?> = _usuario
+
     fun loginConGoogle(context: Context, idToken: String) {
         viewModelScope.launch {
             _authState.value = AuthState.Loading
@@ -30,7 +33,6 @@ class AuthViewModel : ViewModel() {
                 val response = ApiClient.api.loginConGoogle(GoogleAuthRequest(idToken))
                 if (response.isSuccessful) {
                     val body = response.body()!!
-                    // Guardar sesión en DataStore y en memoria
                     TokenDataStore.saveSession(
                         context = context,
                         token = body.token,
@@ -38,6 +40,8 @@ class AuthViewModel : ViewModel() {
                         displayName = body.displayName,
                         email = body.email
                     )
+                    ApiClient.jwtToken = body.token
+                    cargarPerfil()
                     _authState.value = AuthState.Success
                 } else {
                     val errorMsg = when (response.code()) {
@@ -53,6 +57,25 @@ class AuthViewModel : ViewModel() {
                 )
             }
         }
+    }
+
+    fun cargarPerfil() {
+        viewModelScope.launch {
+            try {
+                val respuesta = ApiClient.api.getMiPerfil()
+                if (respuesta.isSuccessful) {
+                    _usuario.value = respuesta.body()
+                }
+            } catch (e: Exception) {
+                // ignorar error de red
+            }
+        }
+    }
+
+    fun logout() {
+        ApiClient.jwtToken = null
+        _usuario.value = null
+        _authState.value = AuthState.Idle
     }
 
     fun resetState() {

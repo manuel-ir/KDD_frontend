@@ -15,8 +15,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.kdd.kdd_frontend.ui.components.*
 import com.kdd.kdd_frontend.ui.theme.*
+import com.kdd.kdd_frontend.viewmodel.ComunidadViewModel
+import com.kdd.kdd_frontend.viewmodel.ComunidadesState
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -29,23 +32,14 @@ fun CommunitiesScreen(
     onNavigateToCreatePlan: () -> Unit,
     onNavigateToCreateCommunity: () -> Unit
 ) {
+    val viewModel: ComunidadViewModel = viewModel()
+    val comunidadesState by viewModel.comunidadesState.collectAsState()
+
     var selectedTab by remember { mutableIntStateOf(0) }
     var filtroActivo by remember { mutableStateOf<String?>(null) }
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     var showBottomSheet by remember { mutableStateOf(false) }
     val tabs = listOf("Descubrir", "Tú")
-
-    val comunidades = listOf(
-        CommunityCardData(
-            id = 1L,
-            nombre = "Escalada SEV",
-            edadMin = 18,
-            edadMax = 55,
-            ubicacion = "Sevilla",
-            numMiembros = 44,
-            adminNombre = "Manuel"
-        )
-    )
 
     Scaffold(
         bottomBar = {
@@ -139,7 +133,6 @@ fun CommunitiesScreen(
             }
 
             if (selectedTab == 1) {
-                // Tab "Tú" - vacío por ahora
                 Box(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center
@@ -150,12 +143,31 @@ fun CommunitiesScreen(
                     }
                 }
             } else {
-                LazyColumn {
-                    items(comunidades) { comunidad ->
-                        CommunityCard(
-                            data = comunidad,
-                            onClick = { onNavigateToCommunityDetail(comunidad.id) }
-                        )
+                when (val estado = comunidadesState) {
+                    is ComunidadesState.Loading -> {
+                        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                            CircularProgressIndicator(color = KddPurple)
+                        }
+                    }
+                    is ComunidadesState.Error -> {
+                        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Text(estado.mensaje, style = MaterialTheme.typography.bodyMedium, color = KddTextSecondary)
+                                Button(onClick = { viewModel.cargarComunidades() }, colors = ButtonDefaults.buttonColors(containerColor = KddPurple)) {
+                                    Text("Reintentar")
+                                }
+                            }
+                        }
+                    }
+                    is ComunidadesState.Success -> {
+                        LazyColumn {
+                            items(estado.comunidades) { comunidad ->
+                                CommunityCard(
+                                    data = comunidad,
+                                    onClick = { onNavigateToCommunityDetail(comunidad.id) }
+                                )
+                            }
+                        }
                     }
                 }
             }

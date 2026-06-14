@@ -26,6 +26,8 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 import com.google.android.gms.common.api.ApiException
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.GoogleAuthProvider
 import com.kdd.kdd_frontend.ui.theme.*
 import com.kdd.kdd_frontend.viewmodel.AuthState
 import com.kdd.kdd_frontend.viewmodel.AuthViewModel
@@ -47,7 +49,6 @@ fun LoginScreen(
     val isLoading = authState is AuthState.Loading
     val errorMessage = (authState as? AuthState.Error)?.mensaje
 
-    // Navegar al éxito
     LaunchedEffect(authState) {
         if (authState is AuthState.Success) {
             authViewModel.resetState()
@@ -55,7 +56,6 @@ fun LoginScreen(
         }
     }
 
-    // Launcher para Google Sign-In
     val googleSignInLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartActivityForResult()
     ) { result ->
@@ -63,18 +63,42 @@ fun LoginScreen(
             val task = GoogleSignIn.getSignedInAccountFromIntent(result.data)
             try {
                 val account = task.getResult(ApiException::class.java)
-                val idToken = account?.idToken
-                if (idToken != null) {
-                    // Enviar idToken al backend → ViewModel lo procesa
-                    authViewModel.loginConGoogle(context, idToken)
+                val googleIdToken = account?.idToken
+                if (googleIdToken != null) {
+                    val credential = GoogleAuthProvider.getCredential(googleIdToken, null)
+                    FirebaseAuth.getInstance().signInWithCredential(credential)
+                        .addOnCompleteListener { authTask ->
+                            if (authTask.isSuccessful) {
+                                authTask.result?.user?.getIdToken(true)
+                                    ?.addOnSuccessListener { tokenResult ->
+                                        val firebaseToken = tokenResult.token
+                                        android.util.Log.d("KDD_AUTH", "Firebase token OK: ${firebaseToken?.take(20)}...")
+                                        if (firebaseToken != null) {
+                                            authViewModel.loginConGoogle(context, firebaseToken)
+                                        } else {
+                                            android.util.Log.e("KDD_AUTH", "Firebase token null")
+                                            authViewModel.resetState()
+                                        }
+                                    }
+                                    ?.addOnFailureListener { e ->
+                                        android.util.Log.e("KDD_AUTH", "getIdToken falló: ${e.message}")
+                                        authViewModel.resetState()
+                                    }
+                            } else {
+                                android.util.Log.e("KDD_AUTH", "signInWithCredential falló: ${authTask.exception?.message}")
+                                authViewModel.resetState()
+                            }
+                        }
                 } else {
-                    // Forzar error visible
+                    android.util.Log.e("KDD_AUTH", "googleIdToken null")
                     authViewModel.resetState()
                 }
             } catch (e: ApiException) {
+                android.util.Log.e("KDD_AUTH", "ApiException: ${e.statusCode} - ${e.message}")
                 authViewModel.resetState()
             }
         } else {
+            android.util.Log.e("KDD_AUTH", "resultCode no OK: ${result.resultCode}")
             authViewModel.resetState()
         }
     }
@@ -84,17 +108,16 @@ fun LoginScreen(
             .fillMaxSize()
             .background(Color(0xFFF0F0F0))
     ) {
-        // Header con gradiente y logo
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(240.dp)
+                .height(220.dp)
                 .background(
-                    Brush.verticalGradient(
+                    Brush.radialGradient(
                         colors = listOf(
-                            Color(0xFF1E0A3C),
-                            Color(0xFF6B3FA0),
-                            Color(0xFF9B5FC0)
+                            Color(0xFF4A90D9),
+                            Color(0xFFE05252),
+                            Color(0xFF3A3A3A)
                         )
                     )
                 ),
@@ -105,37 +128,30 @@ fun LoginScreen(
                 verticalArrangement = Arrangement.Center
             ) {
                 Surface(
-                    modifier = Modifier.size(90.dp),
-                    shape = RoundedCornerShape(22.dp),
-                    color = Color(0xFF7C3FB0)
+                    modifier = Modifier.size(80.dp),
+                    shape = RoundedCornerShape(20.dp),
+                    color = KddYellow
                 ) {
                     Box(contentAlignment = Alignment.Center) {
                         Text(
-                            text = "K",
-                            style = MaterialTheme.typography.headlineLarge,
-                            color = Color.White,
+                            text = "KDD",
+                            style = MaterialTheme.typography.titleLarge,
+                            color = Color.Black,
                             fontWeight = FontWeight.ExtraBold,
-                            fontSize = 42.sp
+                            fontSize = 22.sp
                         )
                     }
                 }
-                Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(10.dp))
                 Text(
                     text = "KDD",
                     style = MaterialTheme.typography.headlineMedium,
                     color = Color.White,
-                    fontWeight = FontWeight.ExtraBold,
-                    letterSpacing = 4.sp
-                )
-                Text(
-                    text = "Queda con gente nueva",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = Color.White.copy(alpha = 0.75f)
+                    fontWeight = FontWeight.Bold
                 )
             }
         }
 
-        // Card con formulario
         Card(
             modifier = Modifier
                 .fillMaxWidth()
@@ -150,26 +166,24 @@ fun LoginScreen(
                     .padding(24.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                // Campo email
                 OutlinedTextField(
                     value = email,
                     onValueChange = { email = it; authViewModel.resetState() },
-                    placeholder = { Text("Correo electrónico", color = KddTextHint) },
+                    placeholder = { Text("Correo electrónico", color = Color(0xFF757575)) },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
                     shape = RoundedCornerShape(10.dp),
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = KddPurple,
-                        unfocusedBorderColor = KddDivider
+                        unfocusedBorderColor = Color(0xFF9E9E9E)
                     )
                 )
 
-                // Campo contraseña
                 OutlinedTextField(
                     value = password,
                     onValueChange = { password = it; authViewModel.resetState() },
-                    placeholder = { Text("Contraseña", color = KddTextHint) },
+                    placeholder = { Text("Contraseña", color = Color(0xFF757575)) },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
                     visualTransformation = PasswordVisualTransformation(),
@@ -177,11 +191,10 @@ fun LoginScreen(
                     shape = RoundedCornerShape(10.dp),
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = KddPurple,
-                        unfocusedBorderColor = KddDivider
+                        unfocusedBorderColor = Color(0xFF9E9E9E)
                     )
                 )
 
-                // Mensaje de error
                 if (errorMessage != null) {
                     Text(
                         text = errorMessage,
@@ -192,34 +205,20 @@ fun LoginScreen(
 
                 Spacer(modifier = Modifier.height(4.dp))
 
-                // Botón login email/contraseña
                 Button(
-                    onClick = {
-                        // TODO: implementar login con email/password en el backend
-                        onLoginSuccess()
-                    },
+                    onClick = { onLoginSuccess() },
                     modifier = Modifier.fillMaxWidth().height(50.dp),
                     shape = RoundedCornerShape(25.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = KddYellow),
                     enabled = email.isNotBlank() && password.isNotBlank() && !isLoading
                 ) {
                     if (isLoading) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(20.dp),
-                            color = Color.Black,
-                            strokeWidth = 2.dp
-                        )
+                        CircularProgressIndicator(modifier = Modifier.size(20.dp), color = Color.Black, strokeWidth = 2.dp)
                     } else {
-                        Text(
-                            "Iniciar sesión",
-                            color = Color.Black,
-                            fontWeight = FontWeight.SemiBold,
-                            fontSize = 16.sp
-                        )
+                        Text("Iniciar sesión", color = Color.Black, fontWeight = FontWeight.SemiBold, fontSize = 16.sp)
                     }
                 }
 
-                // Separador
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.fillMaxWidth()
@@ -229,7 +228,6 @@ fun LoginScreen(
                     HorizontalDivider(modifier = Modifier.weight(1f), color = KddDivider)
                 }
 
-                // Botón Google Sign-In
                 OutlinedButton(
                     onClick = {
                         authViewModel.resetState()
@@ -259,7 +257,6 @@ fun LoginScreen(
                     Text("Continuar con Google", fontWeight = FontWeight.Medium)
                 }
 
-                // Enlace a registro
                 Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
                     TextButton(onClick = onNavigateToRegister) {
                         Text(

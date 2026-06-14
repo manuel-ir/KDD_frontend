@@ -55,7 +55,6 @@ fun ExploreScreen(
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
-            // Título
             Text(
                 text = "Explora",
                 style = MaterialTheme.typography.headlineLarge,
@@ -69,7 +68,6 @@ fun ExploreScreen(
                 modifier = Modifier.padding(start = 20.dp, bottom = 12.dp)
             )
 
-            // Fila de filtros
             Row(
                 modifier = Modifier.padding(horizontal = 16.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -86,19 +84,13 @@ fun ExploreScreen(
                     Spacer(modifier = Modifier.width(4.dp))
                     Text("▼", style = MaterialTheme.typography.bodySmall)
                 }
-
-                // Chip de filtro activo
                 if (filtroActivo != null) {
                     InputChip(
                         selected = true,
                         onClick = { filtroActivo = null },
                         label = { Text(filtroActivo!!) },
                         trailingIcon = {
-                            Icon(
-                                Icons.Filled.Close,
-                                contentDescription = "Quitar filtro",
-                                modifier = Modifier.size(14.dp)
-                            )
+                            Icon(Icons.Filled.Close, contentDescription = "Quitar filtro", modifier = Modifier.size(14.dp))
                         },
                         colors = InputChipDefaults.inputChipColors(
                             selectedContainerColor = KddPurple.copy(alpha = 0.1f),
@@ -110,7 +102,6 @@ fun ExploreScreen(
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            // Lista de planes
             when (val state = planesState) {
                 is PlanesState.Loading -> {
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {

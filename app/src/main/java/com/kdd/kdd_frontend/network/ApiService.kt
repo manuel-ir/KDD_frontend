@@ -1,7 +1,14 @@
 package com.kdd.kdd_frontend.network
 
+import com.kdd.kdd_frontend.network.dto.AmistadDto
 import com.kdd.kdd_frontend.network.dto.AuthResponse
+import com.kdd.kdd_frontend.network.dto.ComunidadDto
+import com.kdd.kdd_frontend.network.dto.CrearComunidadDto
+import com.kdd.kdd_frontend.network.dto.MiembroComunidadDto
+import com.kdd.kdd_frontend.network.dto.CrearPlanDto
 import com.kdd.kdd_frontend.network.dto.GoogleAuthRequest
+import com.kdd.kdd_frontend.network.dto.MensajeDto
+import com.kdd.kdd_frontend.network.dto.ParticipanteDto
 import com.kdd.kdd_frontend.network.dto.PlanDto
 import com.kdd.kdd_frontend.network.dto.UsuarioDto
 import retrofit2.Response
@@ -21,7 +28,7 @@ interface ApiService {
     suspend fun getMiPerfil(): Response<UsuarioDto>
 
     @PUT("api/usuarios/me")
-    suspend fun editarPerfil(@Body body: Map<String, Any>): Response<UsuarioDto>
+    suspend fun editarPerfil(@Body body: Map<String, @JvmSuppressWildcards Any>): Response<UsuarioDto>
 
     // Planes
     @GET("api/planes")
@@ -34,7 +41,19 @@ interface ApiService {
     suspend fun getPlan(@Path("id") id: Long): Response<PlanDto>
 
     @POST("api/planes")
-    suspend fun crearPlan(@Body body: Map<String, Any>): Response<PlanDto>
+    suspend fun crearPlan(@Body body: CrearPlanDto): Response<PlanDto>
+
+    @GET("api/planes/{id}/participantes")
+    suspend fun getParticipantes(@Path("id") id: Long): Response<List<ParticipanteDto>>
+
+    @GET("api/planes/{id}/solicitudes")
+    suspend fun getSolicitudesPlan(@Path("id") id: Long): Response<List<ParticipanteDto>>
+
+    @PUT("api/planes/{id}/participantes/{usuarioId}/confirmar")
+    suspend fun confirmarParticipante(@Path("id") id: Long, @Path("usuarioId") usuarioId: Long): Response<Void>
+
+    @DELETE("api/planes/{id}/participantes/{usuarioId}")
+    suspend fun rechazarParticipante(@Path("id") id: Long, @Path("usuarioId") usuarioId: Long): Response<Void>
 
     @POST("api/planes/{id}/unirse")
     suspend fun unirseAPlan(@Path("id") id: Long): Response<Void>
@@ -44,20 +63,29 @@ interface ApiService {
 
     // Comunidades
     @GET("api/comunidades")
-    suspend fun getComunidades(): Response<List<Map<String, Any>>>
+    suspend fun getComunidades(): Response<List<ComunidadDto>>
 
     @GET("api/comunidades/{id}")
-    suspend fun getComunidad(@Path("id") id: Long): Response<Map<String, Any>>
+    suspend fun getComunidad(@Path("id") id: Long): Response<ComunidadDto>
 
     @POST("api/comunidades")
-    suspend fun crearComunidad(@Body body: Map<String, Any>): Response<Map<String, Any>>
+    suspend fun crearComunidad(@Body body: CrearComunidadDto): Response<ComunidadDto>
 
     @POST("api/comunidades/{id}/unirse")
     suspend fun unirseAComunidad(@Path("id") id: Long): Response<Void>
 
+    @DELETE("api/comunidades/{id}/abandonar")
+    suspend fun abandonarComunidad(@Path("id") id: Long): Response<Void>
+
+    @GET("api/comunidades/{id}/miembros")
+    suspend fun getMiembrosComunidad(@Path("id") id: Long): Response<List<MiembroComunidadDto>>
+
     // Amistades
     @GET("api/amistades")
-    suspend fun getAmigos(): Response<List<Map<String, Any>>>
+    suspend fun getAmigos(): Response<List<AmistadDto>>
+
+    @GET("api/amistades/solicitudes")
+    suspend fun getSolicitudes(): Response<List<AmistadDto>>
 
     @POST("api/amistades/{id}")
     suspend fun enviarSolicitud(@Path("id") id: Long): Response<Void>
@@ -70,12 +98,12 @@ interface ApiService {
 
     // Mensajes
     @GET("api/mensajes/{id}")
-    suspend fun getConversacion(@Path("id") id: Long): Response<List<Map<String, Any>>>
+    suspend fun getConversacion(@Path("id") id: Long): Response<List<MensajeDto>>
 
     @POST("api/mensajes/{id}")
-    suspend fun enviarMensaje(@Path("id") id: Long, @Body body: Map<String, String>): Response<Map<String, Any>>
+    suspend fun enviarMensaje(@Path("id") id: Long, @Body body: Map<String, String>): Response<MensajeDto>
 
     // Valoraciones
     @POST("api/valoraciones")
-    suspend fun valorar(@Body body: Map<String, Any>): Response<Void>
+    suspend fun valorar(@Body body: Map<String, @JvmSuppressWildcards Any>): Response<Void>
 }

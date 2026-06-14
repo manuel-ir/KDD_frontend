@@ -51,7 +51,8 @@ fun NavGraph(navController: NavHostController) {
                 onNavigateToCreatePlan = { navController.navigate(Screen.CreatePlan.route) },
                 onNavigateToCreateCommunity = { navController.navigate(Screen.CreateCommunity.route) },
                 onNavigateToChats = { navController.navigate(Screen.Chats.route) },
-                onNavigateToAccount = { navController.navigate(Screen.Account.route) }
+                onNavigateToAccount = { navController.navigate(Screen.Account.route) },
+                onNavigateToPlan = { planId -> navController.navigate(Screen.PlanDetail.createRoute(planId)) }
             )
         }
 
@@ -147,15 +148,19 @@ fun NavGraph(navController: NavHostController) {
         composable(Screen.Chats.route) {
             ChatsScreen(
                 onNavigateBack = { navController.popBackStack() },
-                onNavigateToChatDetail = { userId -> navController.navigate(Screen.ChatDetail.createRoute(userId)) }
+                onNavigateToChatDetail = { userId, nombre -> navController.navigate(Screen.ChatDetail.createRoute(userId, nombre)) }
             )
         }
         composable(
             route = Screen.ChatDetail.route,
-            arguments = listOf(navArgument("userId") { type = NavType.LongType })
+            arguments = listOf(
+                navArgument("userId") { type = NavType.LongType },
+                navArgument("nombre") { type = NavType.StringType }
+            )
         ) { backStackEntry ->
             ChatDetailScreen(
                 userId = backStackEntry.arguments?.getLong("userId") ?: 0L,
+                nombre = backStackEntry.arguments?.getString("nombre") ?: "",
                 onNavigateBack = { navController.popBackStack() }
             )
         }

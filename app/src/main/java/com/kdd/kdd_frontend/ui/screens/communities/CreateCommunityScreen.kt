@@ -9,7 +9,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -20,33 +19,48 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.kdd.kdd_frontend.ui.screens.plan.CATEGORIAS_PREDEFINIDAS
 import com.kdd.kdd_frontend.ui.theme.*
+import com.kdd.kdd_frontend.viewmodel.ComunidadViewModel
 
 @Composable
 fun CreateCommunityScreen(
     onNavigateBack: () -> Unit,
     onCommunityCreated: () -> Unit
 ) {
+    val viewModel: ComunidadViewModel = viewModel()
+
     var titulo by remember { mutableStateOf("") }
     var categoria by remember { mutableStateOf("") }
     var categoriaPersonalizada by remember { mutableStateOf("") }
-    var edadMin by remember { mutableStateOf("18") }
-    var edadMax by remember { mutableStateOf("99") }
+    var edadMin by remember { mutableFloatStateOf(18f) }
+    var edadMax by remember { mutableFloatStateOf(80f) }
     var ubicacion by remember { mutableStateOf("") }
     var descripcion by remember { mutableStateOf("") }
     var showCategoriasDialog by remember { mutableStateOf(false) }
+    var cargando by remember { mutableStateOf(false) }
+    var errorMsg by remember { mutableStateOf<String?>(null) }
 
-    val formValido = titulo.isNotBlank() && ubicacion.isNotBlank() &&
+    val formValido = titulo.isNotBlank() &&
             categoria.isNotBlank() && (categoria != "Personalizada" || categoriaPersonalizada.isNotBlank())
 
+    val snackbarHostState = remember { SnackbarHostState() }
+    androidx.compose.runtime.LaunchedEffect(errorMsg) {
+        errorMsg?.let {
+            snackbarHostState.showSnackbar(it)
+            errorMsg = null
+        }
+    }
+
+    Scaffold(snackbarHost = { SnackbarHost(snackbarHostState) }) { innerPadding ->
     Column(
         modifier = Modifier
             .fillMaxSize()
             .background(Color.White)
+            .padding(innerPadding)
     ) {
         // Barra superior
         Surface(shadowElevation = 2.dp) {
@@ -122,41 +136,19 @@ fun CreateCommunityScreen(
             }
 
             // 3. Edad mínima y máxima
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(
-                    text = "Rango de edad",
-                    style = MaterialTheme.typography.labelLarge,
-                    fontWeight = FontWeight.SemiBold,
-                    color = KddTextPrimary
-                )
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    OutlinedTextField(
-                        value = edadMin,
-                        onValueChange = { if (it.length <= 3) edadMin = it.filter { c -> c.isDigit() } },
-                        label = { Text("Edad mínima") },
-                        modifier = Modifier.weight(1f),
-                        singleLine = true,
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        shape = RoundedCornerShape(10.dp),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = KddPurple,
-                            unfocusedBorderColor = KddDivider
-                        )
-                    )
-                    OutlinedTextField(
-                        value = edadMax,
-                        onValueChange = { if (it.length <= 3) edadMax = it.filter { c -> c.isDigit() } },
-                        label = { Text("Edad máxima") },
-                        modifier = Modifier.weight(1f),
-                        singleLine = true,
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        shape = RoundedCornerShape(10.dp),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = KddPurple,
-                            unfocusedBorderColor = KddDivider
-                        )
+            Card(colors = CardDefaults.cardColors(containerColor = KddSurface), shape = RoundedCornerShape(12.dp)) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Text("Rango de edad", style = MaterialTheme.typography.titleMedium, color = KddTextSecondary)
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                        Text(edadMin.toInt().toString(), color = KddTextPrimary, fontWeight = FontWeight.Medium)
+                        Text(edadMax.toInt().toString(), color = KddTextPrimary, fontWeight = FontWeight.Medium)
+                    }
+                    RangeSlider(
+                        value = edadMin..edadMax,
+                        onValueChange = { range -> edadMin = range.start; edadMax = range.endInclusive },
+                        valueRange = 18f..80f,
+                        colors = SliderDefaults.colors(thumbColor = KddPurple, activeTrackColor = KddPurple)
                     )
                 }
             }
@@ -264,22 +256,44 @@ fun CreateCommunityScreen(
                     .padding(horizontal = 20.dp, vertical = 12.dp)
             ) {
                 Button(
-                    onClick = onCommunityCreated,
+                    onClick = {
+                        if (formValido && !cargando) {
+                            cargando = true
+                            val nombreFinal = titulo.trim()
+                            val descripcionFinal = descripcion.trim()
+                            viewModel.crearComunidad(
+                                nombre = nombreFinal,
+                                descripcion = descripcionFinal,
+                                ubicacion = ubicacion.trim(),
+                                edadMin = edadMin.toInt(),
+                                edadMax = edadMax.toInt(),
+                                onSuccess = { onCommunityCreated() },
+                                onError = { msg ->
+                                    cargando = false
+                                    errorMsg = msg
+                                }
+                            )
+                        }
+                    },
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(52.dp),
                     shape = RoundedCornerShape(26.dp),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = if (formValido) KddYellow else KddDivider,
-                        contentColor = if (formValido) Color.Black else KddTextHint
+                        containerColor = if (formValido && !cargando) KddYellow else KddDivider,
+                        contentColor = if (formValido && !cargando) Color.Black else KddTextHint
                     ),
-                    enabled = formValido
+                    enabled = formValido && !cargando
                 ) {
-                    Text(
-                        text = "Terminar",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold
-                    )
+                    if (cargando) {
+                        CircularProgressIndicator(modifier = Modifier.size(20.dp), color = Color.Black, strokeWidth = 2.dp)
+                    } else {
+                        Text(
+                            text = "Terminar",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
                 }
             }
         }
@@ -324,6 +338,7 @@ fun CreateCommunityScreen(
             }
         }
     }
+    } // cierre Scaffold
 }
 
 @Composable

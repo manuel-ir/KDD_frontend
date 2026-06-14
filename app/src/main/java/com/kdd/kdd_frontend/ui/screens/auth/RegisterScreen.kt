@@ -102,34 +102,34 @@ fun RegisterScreen(
                 OutlinedTextField(
                     value = nombre,
                     onValueChange = { nombre = it },
-                    placeholder = { Text("Nombre de usuario", color = KddTextHint) },
+                    placeholder = { Text("Nombre de usuario", color = Color(0xFF757575)) },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
                     shape = RoundedCornerShape(10.dp),
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = KddPurple,
-                        unfocusedBorderColor = KddDivider
+                        unfocusedBorderColor = Color(0xFF9E9E9E)
                     )
                 )
 
                 OutlinedTextField(
                     value = email,
                     onValueChange = { email = it },
-                    placeholder = { Text("Correo electrónico", color = KddTextHint) },
+                    placeholder = { Text("Correo electrónico", color = Color(0xFF757575)) },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
                     shape = RoundedCornerShape(10.dp),
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = KddPurple,
-                        unfocusedBorderColor = KddDivider
+                        unfocusedBorderColor = Color(0xFF9E9E9E)
                     )
                 )
 
                 OutlinedTextField(
                     value = password,
                     onValueChange = { password = it },
-                    placeholder = { Text("Contraseña", color = KddTextHint) },
+                    placeholder = { Text("Contraseña", color = Color(0xFF757575)) },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
                     visualTransformation = PasswordVisualTransformation(),
@@ -137,14 +137,14 @@ fun RegisterScreen(
                     shape = RoundedCornerShape(10.dp),
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = KddPurple,
-                        unfocusedBorderColor = KddDivider
+                        unfocusedBorderColor = Color(0xFF9E9E9E)
                     )
                 )
 
                 OutlinedTextField(
                     value = confirmarPassword,
                     onValueChange = { confirmarPassword = it },
-                    placeholder = { Text("Confirmar contraseña", color = KddTextHint) },
+                    placeholder = { Text("Confirmar contraseña", color = Color(0xFF757575)) },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
                     visualTransformation = PasswordVisualTransformation(),
@@ -153,7 +153,7 @@ fun RegisterScreen(
                     shape = RoundedCornerShape(10.dp),
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = KddPurple,
-                        unfocusedBorderColor = KddDivider,
+                        unfocusedBorderColor = Color(0xFF9E9E9E),
                         errorBorderColor = KddError
                     )
                 )

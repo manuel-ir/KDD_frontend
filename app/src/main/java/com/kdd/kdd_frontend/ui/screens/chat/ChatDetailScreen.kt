@@ -20,41 +20,33 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.kdd.kdd_frontend.network.dto.MensajeDto
 import com.kdd.kdd_frontend.ui.theme.*
-
-sealed class ChatItem {
-    data class Message(
-        val id: Long,
-        val contenido: String,
-        val hora: String,
-        val esMio: Boolean
-    ) : ChatItem()
-
-    data class DateSeparator(val fecha: String) : ChatItem()
-}
+import com.kdd.kdd_frontend.viewmodel.ChatViewModel
+import com.kdd.kdd_frontend.viewmodel.MensajesState
 
 @Composable
 fun ChatDetailScreen(
     userId: Long,
+    nombre: String,
     onNavigateBack: () -> Unit
 ) {
+    val viewModel: ChatViewModel = viewModel()
+    val mensajesState by viewModel.mensajesState.collectAsState()
+
     var mensaje by remember { mutableStateOf("") }
     val listState = rememberLazyListState()
 
-    val mensajes = listOf(
-        ChatItem.Message(1L, "Hola! ¿Cómo estás?", "15:30", false),
-        ChatItem.Message(2L, "¡Muy bien! Acabo de apuntarme a un plan de senderismo.", "15:31", true),
-        ChatItem.Message(3L, "Vas a organizar una actividad. ¡Genial! 🚀 Algunos consejos:\n\n- Comparte el lugar, la hora y el tema.\n- Invita a muchos amigas y amigos.\n- Conversa en el chat grupal.\n\n¡Diviértete! Y avísame si necesitas ayuda o más consejos ✌", "15:35", false),
-        ChatItem.DateSeparator("14 abr 2026"),
-        ChatItem.Message(4L, "Vas a organizar una actividad. ¡Genial! 🚀 Algunos consejos:\n\n- Comparte el lugar, la hora y el tema.\n- Invita a muchos amigas y amigos.\n- Conversa en el chat grupal.\n\n¡Diviértete! Y avísame si necesitas ayuda o más consejos ✌", "20:22", false),
-    )
+    LaunchedEffect(userId) {
+        viewModel.cargarConversacion(userId)
+    }
 
     Column(
         modifier = Modifier
             .fillMaxSize()
             .background(Color.White)
     ) {
-        // Barra superior
         Surface(shadowElevation = 2.dp) {
             Row(
                 modifier = Modifier
@@ -71,7 +63,6 @@ fun ChatDetailScreen(
                     )
                 }
 
-                // Avatar
                 Box(
                     modifier = Modifier
                         .size(36.dp)
@@ -79,13 +70,13 @@ fun ChatDetailScreen(
                         .background(KddSurfaceVariant),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text("E", fontWeight = FontWeight.Bold, color = KddTextSecondary)
+                    Text(nombre.firstOrNull()?.toString() ?: "?", fontWeight = FontWeight.Bold, color = KddTextSecondary)
                 }
 
                 Spacer(modifier = Modifier.width(8.dp))
 
                 Text(
-                    text = "Emma",
+                    text = nombre,
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold,
                     color = KddTextPrimary,
@@ -116,24 +107,40 @@ fun ChatDetailScreen(
 
         HorizontalDivider()
 
-        // Lista de mensajes
-        LazyColumn(
-            state = listState,
-            modifier = Modifier
-                .weight(1f)
-                .padding(horizontal = 12.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp),
-            contentPadding = PaddingValues(vertical = 12.dp)
-        ) {
-            items(mensajes) { item ->
-                when (item) {
-                    is ChatItem.DateSeparator -> DateSeparatorItem(fecha = item.fecha)
-                    is ChatItem.Message -> MessageBubble(message = item)
+        when (val estado = mensajesState) {
+            is MensajesState.Loading -> {
+                Box(modifier = Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator(color = KddPurple)
+                }
+            }
+            is MensajesState.Error -> {
+                Box(modifier = Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
+                    Text(estado.mensaje, style = MaterialTheme.typography.bodyMedium, color = KddTextSecondary)
+                }
+            }
+            is MensajesState.Success -> {
+                val miId = viewModel.miUserId
+                LazyColumn(
+                    state = listState,
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(horizontal = 12.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                    contentPadding = PaddingValues(vertical = 12.dp)
+                ) {
+                    items(estado.mensajes) { msg ->
+                        MessageBubble(msg = msg, esMio = msg.emisorId == miId)
+                    }
+                }
+
+                LaunchedEffect(estado.mensajes.size) {
+                    if (estado.mensajes.isNotEmpty()) {
+                        listState.animateScrollToItem(estado.mensajes.size - 1)
+                    }
                 }
             }
         }
 
-        // Input de mensaje
         Surface(shadowElevation = 4.dp) {
             Row(
                 modifier = Modifier
@@ -159,8 +166,9 @@ fun ChatDetailScreen(
                 IconButton(
                     onClick = {
                         if (mensaje.isNotBlank()) {
-                            // TODO: enviar mensaje
+                            val texto = mensaje
                             mensaje = ""
+                            viewModel.enviarMensaje(userId, texto, onSuccess = {})
                         }
                     },
                     modifier = Modifier
@@ -181,53 +189,31 @@ fun ChatDetailScreen(
 }
 
 @Composable
-private fun DateSeparatorItem(fecha: String) {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 8.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        Surface(
-            shape = RoundedCornerShape(12.dp),
-            color = KddSurfaceVariant
-        ) {
-            Text(
-                text = fecha,
-                modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
-                style = MaterialTheme.typography.labelSmall,
-                color = KddTextSecondary
-            )
-        }
-    }
-}
-
-@Composable
-private fun MessageBubble(message: ChatItem.Message) {
+private fun MessageBubble(msg: MensajeDto, esMio: Boolean) {
     Column(
         modifier = Modifier.fillMaxWidth(),
-        horizontalAlignment = if (message.esMio) Alignment.End else Alignment.Start
+        horizontalAlignment = if (esMio) Alignment.End else Alignment.Start
     ) {
         Surface(
             shape = RoundedCornerShape(
                 topStart = 16.dp,
                 topEnd = 16.dp,
-                bottomStart = if (message.esMio) 16.dp else 4.dp,
-                bottomEnd = if (message.esMio) 4.dp else 16.dp
+                bottomStart = if (esMio) 16.dp else 4.dp,
+                bottomEnd = if (esMio) 4.dp else 16.dp
             ),
-            color = if (message.esMio) KddPurple else KddSurface,
+            color = if (esMio) KddPurple else KddSurface,
             modifier = Modifier.widthIn(max = 280.dp)
         ) {
             Text(
-                text = message.contenido,
+                text = msg.contenido,
                 modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
                 style = MaterialTheme.typography.bodyMedium,
-                color = if (message.esMio) Color.White else KddTextPrimary
+                color = if (esMio) Color.White else KddTextPrimary
             )
         }
         Spacer(modifier = Modifier.height(2.dp))
         Text(
-            text = message.hora,
+            text = msg.fechaEnvio?.take(16)?.replace("T", " ") ?: "",
             style = MaterialTheme.typography.labelSmall,
             color = KddTextHint,
             fontSize = 11.sp,
