@@ -88,13 +88,13 @@ fun LoginScreen(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(220.dp)
+                .height(240.dp)
                 .background(
-                    Brush.radialGradient(
+                    Brush.verticalGradient(
                         colors = listOf(
-                            Color(0xFF4A90D9),
-                            Color(0xFFE05252),
-                            Color(0xFF3A3A3A)
+                            Color(0xFF1E0A3C),
+                            Color(0xFF6B3FA0),
+                            Color(0xFF9B5FC0)
                         )
                     )
                 ),
@@ -105,26 +105,32 @@ fun LoginScreen(
                 verticalArrangement = Arrangement.Center
             ) {
                 Surface(
-                    modifier = Modifier.size(80.dp),
-                    shape = RoundedCornerShape(20.dp),
-                    color = KddYellow
+                    modifier = Modifier.size(90.dp),
+                    shape = RoundedCornerShape(22.dp),
+                    color = Color(0xFF7C3FB0)
                 ) {
                     Box(contentAlignment = Alignment.Center) {
                         Text(
-                            text = "KDD",
-                            style = MaterialTheme.typography.titleLarge,
-                            color = Color.Black,
+                            text = "K",
+                            style = MaterialTheme.typography.headlineLarge,
+                            color = Color.White,
                             fontWeight = FontWeight.ExtraBold,
-                            fontSize = 22.sp
+                            fontSize = 42.sp
                         )
                     }
                 }
-                Spacer(modifier = Modifier.height(10.dp))
+                Spacer(modifier = Modifier.height(12.dp))
                 Text(
                     text = "KDD",
                     style = MaterialTheme.typography.headlineMedium,
                     color = Color.White,
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.ExtraBold,
+                    letterSpacing = 4.sp
+                )
+                Text(
+                    text = "Queda con gente nueva",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color.White.copy(alpha = 0.75f)
                 )
             }
         }
