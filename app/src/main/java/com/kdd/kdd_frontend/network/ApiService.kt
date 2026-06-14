@@ -80,6 +80,9 @@ interface ApiService {
     @GET("api/comunidades/{id}/miembros")
     suspend fun getMiembrosComunidad(@Path("id") id: Long): Response<List<MiembroComunidadDto>>
 
+    @GET("api/comunidades/{id}/planes")
+    suspend fun getPlanesComunidad(@Path("id") id: Long): Response<List<PlanDto>>
+
     // Amistades
     @GET("api/amistades")
     suspend fun getAmigos(): Response<List<AmistadDto>>

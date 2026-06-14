@@ -63,4 +63,50 @@ class PerfilViewModel : ViewModel() {
                 if (!fechaNacimiento.isNullOrBlank()) body["fechaNacimiento"] = fechaNacimiento
                 val response = ApiClient.api.editarPerfil(body)
                 if (response.isSuccessful) {
-                    _perfilState.v
+                    _perfilState.value = PerfilState.Success(response.body()!!)
+                    onSuccess()
+                } else {
+                    onError("Error ${response.code()}")
+                }
+            } catch (e: Exception) {
+                onError("No se pudo actualizar el perfil")
+            }
+        }
+    }
+
+    fun subirFotoPerfil(imageUri: Uri, onSuccess: () -> Unit, onError: (String) -> Unit) {
+        _subiendoFoto.value = true
+        val user = FirebaseAuth.getInstance().currentUser ?: run {
+            _subiendoFoto.value = false
+            onError("Sesión no iniciada en Firebase")
+            return
+        }
+        val ref = FirebaseStorage.getInstance().reference.child("fotos_perfil/${user.uid}.jpg")
+        viewModelScope.launch {
+            try {
+                ref.putFile(imageUri).await()
+                val url = ref.downloadUrl.await().toString()
+                val body = mutableMapOf<String, Any>("fotoPerfil" to url)
+                val response = ApiClient.api.editarPerfil(body)
+                if (response.isSuccessful) {
+                    _perfilState.value = PerfilState.Success(response.body()!!)
+                    onSuccess()
+                } else {
+                    onError("Error al guardar la foto en el servidor")
+                }
+            } catch (e: Exception) {
+                onError("Error al subir la foto: ${e.message}")
+            } finally {
+                _subiendoFoto.value = false
+            }
+        }
+    }
+
+    fun cerrarSesion(context: Context, onLogout: () -> Unit) {
+        viewModelScope.launch {
+            TokenDataStore.clearSession(context)
+            _perfilState.value = PerfilState.Loading
+            onLogout()
+        }
+    }
+}

@@ -27,6 +27,8 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.kdd.kdd_frontend.network.dto.MiembroComunidadDto
 import com.kdd.kdd_frontend.ui.components.PlanCard
+import com.kdd.kdd_frontend.ui.components.PlanCardData
+import com.kdd.kdd_frontend.network.dto.PlanDto
 import com.kdd.kdd_frontend.ui.components.*
 import com.kdd.kdd_frontend.ui.theme.*
 import com.kdd.kdd_frontend.viewmodel.ComunidadDetalleState
@@ -265,7 +267,17 @@ fun CommunityDetailScreen(
                             } else {
                                 items(planesComunidad) { plan ->
                                     PlanCard(
-                                        data = plan,
+                                        data = PlanCardData(
+                                            id = plan.id,
+                                            titulo = plan.titulo,
+                                            categoria = plan.categoria ?: "",
+                                            descripcion = plan.descripcion ?: "",
+                                            dia = plan.fechaEvento ?: "Sin fecha",
+                                            hora = plan.horaEvento ?: "",
+                                            distanciaKm = "",
+                                            ubicacion = plan.ubicacionTexto,
+                                            anfitrionNombre = plan.anfitrionNombre ?: ""
+                                        ),
                                         onClick = { onNavigateToPlan(plan.id) }
                                     )
                                 }

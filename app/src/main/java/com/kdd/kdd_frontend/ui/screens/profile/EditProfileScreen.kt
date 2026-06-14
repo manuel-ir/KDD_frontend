@@ -23,9 +23,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.viewmodel.compose.viewModel
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
 import coil.compose.AsyncImage
 import com.kdd.kdd_frontend.ui.theme.*
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EditProfileScreen(
     onNavigateBack: () -> Unit
@@ -224,6 +227,116 @@ fun EditProfileScreen(
                         label = { Text("Nombre de usuario (alias)") },
                         placeholder = { Text("Ej: pepegrillo92", color = KddTextHint) },
                         singleLine = true,
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = KddPurple,
+                            unfocusedBorderColor = KddDivider
+                        )
+                    )
+
+                    OutlinedTextField(
+                        value = tempDesc,
+                        onValueChange = { if (it.length <= 150) tempDesc = it },
+                        label = { Text("Descripción") },
+                        placeholder = { Text("Cuéntanos algo sobre ti", color = KddTextHint) },
+                        singleLine = false,
+                        maxLines = 3,
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(10.dp),
-                        colors = OutlinedTextFieldDefaults.color
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = KddPurple,
+                            unfocusedBorderColor = KddDivider
+                        )
+                    )
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.End
+                    ) {
+                        TextButton(onClick = { showNombreDialog = false }) { Text("Cancelar") }
+                        TextButton(onClick = {
+                            viewModel.editarPerfil(
+                                nombre = tempNombre,
+                                nombreUsuario = tempNombreUsuario.ifBlank { null },
+                                descripcion = tempDesc,
+                                fechaNacimiento = null,
+                                onSuccess = {
+                                    nombre = tempNombre
+                                    nombreUsuario = tempNombreUsuario
+                                    descripcion = tempDesc
+                                    showNombreDialog = false
+                                },
+                                onError = { errorMsg = it }
+                            )
+                        }) { Text("Guardar", color = KddPurple) }
+                    }
+                }
+            }
+        }
+    }
+
+    if (showFechaDialog) {
+        val datePickerState = rememberDatePickerState()
+        DatePickerDialog(
+            onDismissRequest = { showFechaDialog = false },
+            confirmButton = {
+                TextButton(onClick = {
+                    val millis = datePickerState.selectedDateMillis
+                    if (millis != null) {
+                        val cal = java.util.Calendar.getInstance().apply { timeInMillis = millis }
+                        val y = cal.get(java.util.Calendar.YEAR)
+                        val m = (cal.get(java.util.Calendar.MONTH) + 1).toString().padStart(2, '0')
+                        val d = cal.get(java.util.Calendar.DAY_OF_MONTH).toString().padStart(2, '0')
+                        fechaNacimiento = "$y-$m-$d"
+                        viewModel.editarPerfil(
+                            nombre = nombre,
+                            nombreUsuario = nombreUsuario.ifBlank { null },
+                            descripcion = descripcion,
+                            fechaNacimiento = fechaNacimiento,
+                            onSuccess = {},
+                            onError = { errorMsg = it }
+                        )
+                    }
+                    showFechaDialog = false
+                }) { Text("Aceptar", color = KddPurple) }
+            },
+            dismissButton = {
+                TextButton(onClick = { showFechaDialog = false }) { Text("Cancelar") }
+            }
+        ) {
+            DatePicker(state = datePickerState)
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun EditOption(
+    label: String,
+    sublabel: String,
+    locked: Boolean = false,
+    onClick: () -> Unit
+) {
+    Card(
+        onClick = onClick,
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        shape = RoundedCornerShape(12.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 14.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(label, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold, color = KddTextPrimary)
+                Text(sublabel, style = MaterialTheme.typography.bodySmall, color = KddTextHint)
+            }
+            if (locked) {
+                Icon(Icons.Filled.Lock, contentDescription = null, tint = KddTextHint, modifier = Modifier.size(18.dp))
+            } else {
+                Icon(Icons.AutoMirrored.Filled.ArrowForwardIos, contentDescription = null, tint = KddTextHint, modifier = Modifier.size(16.dp))
+            }
+        }
+    }
+}

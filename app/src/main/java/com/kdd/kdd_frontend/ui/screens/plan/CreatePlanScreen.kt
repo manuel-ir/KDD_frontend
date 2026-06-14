@@ -39,6 +39,7 @@ import android.location.Geocoder
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.util.Locale
+import kotlinx.coroutines.launch
 
 val CATEGORIAS_PREDEFINIDAS = listOf(
     "Deportes", "Naturaleza", "Fiesta", "Música", "Arte y Cultura",
@@ -339,7 +340,6 @@ fun CreatePlanScreen(
                                     ubicacionTexto = ubicacionNombre.ifBlank { null },
                                     latitud = selectedLatLng?.latitude,
                                     longitud = selectedLatLng?.longitude,
-                                    comunidadId = if (communityId > 0) communityId else null,
                                     edadMin = edadMin.toInt(),
                                     edadMax = edadMax.toInt(),
                                     numMaxPersonas = (vasAcompanado + maxAcompanantes).toInt(),
@@ -646,5 +646,67 @@ private fun TimePickerDialogKdd(
     content: @Composable () -> Unit
 ) {
     Dialog(onDismissRequest = onDismiss) {
-        Card(shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
-            Column(modifier = Modifier.p
+            Column(modifier = Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                content()
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End
+                ) {
+                    TextButton(onClick = onDismiss) { Text("Cancelar") }
+                    TextButton(onClick = onConfirm) { Text("Aceptar", color = KddPurple) }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun FormField(
+    label: String,
+    value: String,
+    onValueChange: (String) -> Unit,
+    placeholder: String = "",
+    maxChars: Int = Int.MAX_VALUE,
+    singleLine: Boolean = true
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Text(label, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, color = KddTextPrimary)
+        OutlinedTextField(
+            value = value,
+            onValueChange = onValueChange,
+            placeholder = { Text(placeholder, color = KddTextHint) },
+            singleLine = singleLine,
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(10.dp),
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedBorderColor = KddPurple,
+                unfocusedBorderColor = KddDivider
+            ),
+            supportingText = if (maxChars < Int.MAX_VALUE) {
+                { Text("${value.length}/$maxChars", style = MaterialTheme.typography.labelSmall, color = KddTextHint) }
+            } else null
+        )
+    }
+}
+
+@Composable
+private fun SliderField(
+    label: String,
+    sublabel: String,
+    value: Float,
+    onValueChange: (Float) -> Unit,
+    valueRange: ClosedFloatingPointRange<Float> = 0f..100f,
+    steps: Int = 0
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Text(label, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, color = KddTextPrimary)
+        Text(sublabel, style = MaterialTheme.typography.bodySmall, color = KddTextSecondary)
+        Slider(
+            value = value,
+            onValueChange = onValueChange,
+            valueRange = valueRange,
+            steps = steps,
+            colors = SliderDefaults.colors(thumbColor = KddPurple, activeTrackColor = KddPurple)
+        )
+    }
+}
