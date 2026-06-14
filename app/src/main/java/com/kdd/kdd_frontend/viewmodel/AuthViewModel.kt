@@ -53,32 +53,23 @@ class AuthViewModel : ViewModel() {
                 }
             } catch (e: Exception) {
                 _authState.value = AuthState.Error(
-                    "No se pudo conectar con el servidor.\nComprueba que el backend está en marcha."
+                    "No se pudo conectar con el servidor.\nComprueba que el backend está en 
+                    "No se pudo conectar con el servidor.\nComprueba que el backend está en marcha"
                 )
             }
         }
     }
 
-    fun cargarPerfil() {
+    private fun cargarPerfil() {
         viewModelScope.launch {
             try {
-                val respuesta = ApiClient.api.getMiPerfil()
-                if (respuesta.isSuccessful) {
-                    _usuario.value = respuesta.body()
+                val response = ApiClient.api.getPerfilPropio()
+                if (response.isSuccessful) {
+                    _usuario.value = response.body()
                 }
             } catch (e: Exception) {
-                // ignorar error de red
+                // ignorar si falla el perfil, el login ya fue exitoso
             }
         }
-    }
-
-    fun logout() {
-        ApiClient.jwtToken = null
-        _usuario.value = null
-        _authState.value = AuthState.Idle
-    }
-
-    fun resetState() {
-        _authState.value = AuthState.Idle
     }
 }

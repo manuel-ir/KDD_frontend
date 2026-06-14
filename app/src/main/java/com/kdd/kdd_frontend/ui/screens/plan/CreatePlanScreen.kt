@@ -646,6 +646,10 @@ private fun TimePickerDialogKdd(
     content: @Composable () -> Unit
 ) {
     Dialog(onDismissRequest = onDismiss) {
+        Card(
+            shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.cardColors(containerColor = Color.White)
+        ) {
             Column(modifier = Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 content()
                 Row(
@@ -667,7 +671,8 @@ private fun FormField(
     onValueChange: (String) -> Unit,
     placeholder: String = "",
     maxChars: Int = Int.MAX_VALUE,
-    singleLine: Boolean = true
+    singleLine: Boolean = true,
+    minLines: Int = 1
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Text(label, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, color = KddTextPrimary)
@@ -676,6 +681,7 @@ private fun FormField(
             onValueChange = onValueChange,
             placeholder = { Text(placeholder, color = KddTextHint) },
             singleLine = singleLine,
+            minLines = if (singleLine) 1 else minLines,
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(10.dp),
             colors = OutlinedTextFieldDefaults.colors(

@@ -169,7 +169,6 @@ class ComunidadViewModel(application: Application) : AndroidViewModel(applicatio
             }
         }
     }
-}
 
     fun cargarPlanesComunidad(id: Long) {
         viewModelScope.launch {

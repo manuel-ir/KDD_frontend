@@ -27,6 +27,8 @@ import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import coil.compose.AsyncImage
 import com.kdd.kdd_frontend.ui.theme.*
+import com.kdd.kdd_frontend.viewmodel.PerfilViewModel
+import com.kdd.kdd_frontend.viewmodel.PerfilState
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
