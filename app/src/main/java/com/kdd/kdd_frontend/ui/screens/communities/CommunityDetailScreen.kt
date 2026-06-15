@@ -8,6 +8,10 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -21,6 +25,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
+import com.kdd.kdd_frontend.network.dto.MiembroComunidadDto
+import com.kdd.kdd_frontend.ui.components.PlanCard
+import com.kdd.kdd_frontend.ui.components.PlanCardData
+import com.kdd.kdd_frontend.network.dto.PlanDto
 import com.kdd.kdd_frontend.ui.components.*
 import com.kdd.kdd_frontend.ui.theme.*
 import com.kdd.kdd_frontend.viewmodel.ComunidadDetalleState
@@ -30,24 +38,38 @@ import com.kdd.kdd_frontend.viewmodel.ComunidadViewModel
 fun CommunityDetailScreen(
     communityId: Long,
     onNavigateBack: () -> Unit,
-    onNavigateToPlan: (Long) -> Unit
+    onNavigateToPlan: (Long) -> Unit,
+    onNavigateToCreatePlan: () -> Unit = {}
 ) {
     val viewModel: ComunidadViewModel = viewModel()
     val detalleState by viewModel.detalleState.collectAsState()
+    val miembros by viewModel.miembros.collectAsState()
+    val planesComunidad by viewModel.planesComunidad.collectAsState()
 
     var selectedTab by remember { mutableIntStateOf(0) }
     val tabs = listOf("Información", "Actividades", "Miembros")
-    var unidoExitoso by remember { mutableStateOf(false) }
     val snackbarHostState = remember { SnackbarHostState() }
+    var errorMsg by remember { mutableStateOf<String?>(null) }
+
+    LaunchedEffect(errorMsg) {
+        errorMsg?.let { snackbarHostState.showSnackbar(it); errorMsg = null }
+    }
 
     LaunchedEffect(communityId) {
         viewModel.cargarDetalle(communityId)
     }
 
+    LaunchedEffect(selectedTab) {
+        if (selectedTab == 1) viewModel.cargarPlanesComunidad(communityId)
+        if (selectedTab == 2) viewModel.cargarMiembros(communityId)
+    }
+
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         bottomBar = {
-            if (detalleState is ComunidadDetalleState.Success) {
+            val estado = detalleState
+            if (estado is ComunidadDetalleState.Success) {
+                val comunidad = estado.comunidad
                 Surface(shadowElevation = 8.dp) {
                     Row(
                         modifier = Modifier
@@ -59,36 +81,55 @@ fun CommunityDetailScreen(
                     ) {
                         IconButton(
                             onClick = { },
-                            modifier = Modifier
-                                .size(44.dp)
-                                .clip(CircleShape)
-                                .background(KddSurface)
+                            modifier = Modifier.size(44.dp).clip(CircleShape).background(KddSurface)
                         ) {
                             Icon(Icons.Filled.Share, contentDescription = "Compartir", tint = KddTextPrimary)
                         }
-                        Button(
-                            onClick = {
-                                if (!unidoExitoso) {
-                                    viewModel.unirseAComunidad(
-                                        id = communityId,
-                                        onSuccess = { unidoExitoso = true },
-                                        onError = { }
-                                    )
+                        when {
+                            comunidad.admin -> {
+                                Button(
+                                    onClick = onNavigateToCreatePlan,
+                                    modifier = Modifier.weight(1f).height(48.dp),
+                                    shape = RoundedCornerShape(24.dp),
+                                    colors = ButtonDefaults.buttonColors(containerColor = KddPurple)
+                                ) {
+                                    Icon(Icons.Filled.Add, contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp))
+                                    Spacer(Modifier.width(6.dp))
+                                    Text("Añadir actividad", color = Color.White, fontWeight = FontWeight.SemiBold)
                                 }
-                            },
-                            modifier = Modifier
-                                .weight(1f)
-                                .height(48.dp),
-                            shape = RoundedCornerShape(24.dp),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = if (unidoExitoso) KddTextHint else KddPurple
-                            )
-                        ) {
-                            Text(
-                                text = if (unidoExitoso) "Solicitud enviada" else "Unirse",
-                                color = Color.White,
-                                fontWeight = FontWeight.SemiBold
-                            )
+                            }
+                            comunidad.miembro -> {
+                                Button(
+                                    onClick = {
+                                        viewModel.abandonarComunidad(
+                                            id = communityId,
+                                            onSuccess = { viewModel.cargarDetalle(communityId) },
+                                            onError = { msg -> errorMsg = msg }
+                                        )
+                                    },
+                                    modifier = Modifier.weight(1f).height(48.dp),
+                                    shape = RoundedCornerShape(24.dp),
+                                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE53935))
+                                ) {
+                                    Text("Abandonar", color = Color.White, fontWeight = FontWeight.SemiBold)
+                                }
+                            }
+                            else -> {
+                                Button(
+                                    onClick = {
+                                        viewModel.unirseAComunidad(
+                                            id = communityId,
+                                            onSuccess = { viewModel.cargarDetalle(communityId) },
+                                            onError = { msg -> errorMsg = msg }
+                                        )
+                                    },
+                                    modifier = Modifier.weight(1f).height(48.dp),
+                                    shape = RoundedCornerShape(24.dp),
+                                    colors = ButtonDefaults.buttonColors(containerColor = KddPurple)
+                                ) {
+                                    Text("Unirse", color = Color.White, fontWeight = FontWeight.SemiBold)
+                                }
+                            }
                         }
                     }
                 }
@@ -214,26 +255,59 @@ fun CommunityDetailScreen(
                             }
                         }
                         1 -> {
-                            item {
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(32.dp),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Text("Sin actividades todavía", style = MaterialTheme.typography.bodyMedium, color = KddTextSecondary)
+                            if (planesComunidad.isEmpty()) {
+                                item {
+                                    Box(
+                                        modifier = Modifier.fillMaxWidth().padding(32.dp),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text("Sin actividades todavía", style = MaterialTheme.typography.bodyMedium, color = KddTextSecondary)
+                                    }
+                                }
+                            } else {
+                                items(planesComunidad) { plan ->
+                                    PlanCard(
+                                        data = PlanCardData(
+                                            id = plan.id,
+                                            titulo = plan.titulo,
+                                            categoria = plan.categoria ?: "",
+                                            descripcion = plan.descripcion ?: "",
+                                            dia = plan.fechaEvento ?: "Sin fecha",
+                                            hora = plan.horaEvento ?: "",
+                                            distanciaKm = "",
+                                            ubicacion = plan.ubicacionTexto,
+                                            anfitrionNombre = plan.anfitrionNombre ?: ""
+                                        ),
+                                        onClick = { onNavigateToPlan(plan.id) }
+                                    )
                                 }
                             }
                         }
                         2 -> {
-                            item {
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(32.dp),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Text("${comunidad.numMiembros} miembros", style = MaterialTheme.typography.bodyMedium, color = KddTextSecondary)
+                            if (miembros.isEmpty()) {
+                                item {
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(32.dp),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        CircularProgressIndicator(color = KddPurple, modifier = Modifier.size(24.dp))
+                                    }
+                                }
+                            } else {
+                                items(miembros) { miembro ->
+                                    MemberCard(
+                                        miembro = miembro,
+                                        esSoyYo = miembro.id == viewModel.miUserId,
+                                        onAnadirAmigo = { id ->
+                                            viewModel.enviarSolicitudAmistad(
+                                                destinatarioId = id,
+                                                onSuccess = {},
+                                                onError = {}
+                                            )
+                                        }
+                                    )
                                 }
                             }
                         }
@@ -267,37 +341,67 @@ private fun CommunityInfoRow(icon: ImageVector, label: String, value: String) {
 }
 
 @Composable
-private fun MemberRow(nombre: String, puntuacion: Float) {
+private fun MemberCard(
+    miembro: MiembroComunidadDto,
+    esSoyYo: Boolean,
+    onAnadirAmigo: (Long) -> Unit
+) {
+    var solicitudEnviada by remember { mutableStateOf(false) }
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp),
+            .padding(horizontal = 16.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Box(
-            modifier = Modifier
-                .size(40.dp)
-                .clip(CircleShape)
-                .background(KddSurface),
-            contentAlignment = Alignment.Center
-        ) {
-            Text(nombre.first().toString(), fontWeight = FontWeight.Bold, color = KddTextSecondary)
+        if (!miembro.fotoPerfil.isNullOrBlank()) {
+            AsyncImage(
+                model = miembro.fotoPerfil,
+                contentDescription = miembro.nombre,
+                modifier = Modifier.size(48.dp).clip(CircleShape),
+                contentScale = ContentScale.Crop
+            )
+        } else {
+            Box(
+                modifier = Modifier
+                    .size(48.dp)
+                    .clip(CircleShape)
+                    .background(KddSurfaceVariant),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = miembro.nombre.firstOrNull()?.uppercaseChar()?.toString() ?: "?",
+                    fontWeight = FontWeight.Bold,
+                    color = KddTextSecondary,
+                    fontSize = 18.sp
+                )
+            }
         }
         Spacer(modifier = Modifier.width(12.dp))
-        Text(
-            text = nombre,
-            style = MaterialTheme.typography.bodyMedium,
-            color = KddTextPrimary,
-            modifier = Modifier.weight(1f)
-        )
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(Icons.Filled.Star, contentDescription = null, tint = KddYellow, modifier = Modifier.size(16.dp))
-            Spacer(modifier = Modifier.width(4.dp))
-            Text(
-                text = String.format("%.1f", puntuacion),
-                style = MaterialTheme.typography.bodySmall,
-                color = KddTextSecondary
-            )
+        Column(modifier = Modifier.weight(1f)) {
+            Text(miembro.nombre, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold, color = KddTextPrimary)
+            if (miembro.edad != null) {
+                Text("${miembro.edad} años", style = MaterialTheme.typography.bodySmall, color = KddTextHint)
+            }
+        }
+        if (!esSoyYo) {
+            IconButton(
+                onClick = {
+                    if (!solicitudEnviada) {
+                        solicitudEnviada = true
+                        onAnadirAmigo(miembro.id)
+                    }
+                },
+                modifier = Modifier.size(36.dp)
+            ) {
+                Icon(
+                    imageVector = if (solicitudEnviada) Icons.Filled.Check else Icons.Filled.PersonAdd,
+                    contentDescription = if (solicitudEnviada) "Solicitud enviada" else "Añadir amigo",
+                    tint = if (solicitudEnviada) KddTextHint else KddPurple,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
         }
     }
+    HorizontalDivider(modifier = Modifier.padding(start = 76.dp), color = KddDivider)
 }

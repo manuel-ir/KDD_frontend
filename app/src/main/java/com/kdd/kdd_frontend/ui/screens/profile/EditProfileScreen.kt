@@ -1,183 +1,330 @@
 package com.kdd.kdd_frontend.ui.screens.profile
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForwardIos
-import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.viewmodel.compose.viewModel
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
+import coil.compose.AsyncImage
 import com.kdd.kdd_frontend.ui.theme.*
-import com.kdd.kdd_frontend.viewmodel.PerfilState
 import com.kdd.kdd_frontend.viewmodel.PerfilViewModel
+import com.kdd.kdd_frontend.viewmodel.PerfilState
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EditProfileScreen(
     onNavigateBack: () -> Unit
 ) {
     val viewModel: PerfilViewModel = viewModel()
     val perfilState by viewModel.perfilState.collectAsState()
+    val subiendoFoto by viewModel.subiendoFoto.collectAsState()
 
     var nombre by remember { mutableStateOf("") }
-    var edad by remember { mutableStateOf("") }
+    var nombreUsuario by remember { mutableStateOf("") }
+    var fechaNacimiento by remember { mutableStateOf("") }
     var descripcion by remember { mutableStateOf("") }
-    var showNombreDialog by remember { mutableStateOf(false) }
-    var showDescripcionDialog by remember { mutableStateOf(false) }
+    var fotoPerfil by remember { mutableStateOf<String?>(null) }
 
-    LaunchedEffect(perfilState) {
-        if (perfilState is PerfilState.Success) {
-            val usuario = (perfilState as PerfilState.Success).usuario
-            if (nombre.isBlank()) nombre = usuario.nombre ?: ""
-            if (descripcion.isBlank()) descripcion = usuario.descripcion ?: ""
-            if (edad.isBlank()) edad = usuario.edad?.toString() ?: ""
+    var showNombreDialog by remember { mutableStateOf(false) }
+    var showFechaDialog by remember { mutableStateOf(false) }
+    var showFechaWarning by remember { mutableStateOf(false) }
+    var errorMsg by remember { mutableStateOf("") }
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    LaunchedEffect(errorMsg) {
+        if (errorMsg.isNotBlank()) {
+            snackbarHostState.showSnackbar(errorMsg)
+            errorMsg = ""
         }
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color.White)
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .statusBarsPadding()
-                .padding(horizontal = 8.dp, vertical = 4.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            IconButton(onClick = onNavigateBack) {
-                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Volver", tint = KddTextPrimary)
-            }
-            Text("Editar perfil", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = 8.dp))
+    LaunchedEffect(perfilState) {
+        if (perfilState is PerfilState.Success) {
+            val u = (perfilState as PerfilState.Success).usuario
+            if (nombre.isBlank()) nombre = u.nombre
+            if (nombreUsuario.isBlank()) nombreUsuario = u.nombreUsuario ?: ""
+            if (descripcion.isBlank()) descripcion = u.descripcion ?: ""
+            if (fechaNacimiento.isBlank()) fechaNacimiento = u.fechaNacimiento ?: ""
+            if (fotoPerfil == null && u.fotoPerfil != null) fotoPerfil = u.fotoPerfil
         }
+    }
 
-        HorizontalDivider()
-        Spacer(modifier = Modifier.height(24.dp))
-
-        Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-            Box {
-                Box(
-                    modifier = Modifier.size(80.dp).clip(CircleShape).background(KddSurfaceVariant),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(nombre.firstOrNull()?.uppercaseChar()?.toString() ?: "?", fontSize = 32.sp, fontWeight = FontWeight.Bold, color = KddTextSecondary)
-                }
-                Box(
-                    modifier = Modifier.size(26.dp).clip(CircleShape).background(KddPurple).align(Alignment.TopEnd),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(Icons.Filled.Add, contentDescription = "Cambiar foto", tint = Color.White, modifier = Modifier.size(16.dp))
-                }
-            }
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(nombre.ifBlank { "..." }, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = KddTextPrimary)
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                if (descripcion.isNotBlank()) descripcion else "Sin descripción",
-                style = MaterialTheme.typography.bodyMedium,
-                color = if (descripcion.isNotBlank()) KddTextSecondary else KddTextHint
+    val imagePicker = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri ->
+        uri?.let {
+            viewModel.subirFotoPerfil(
+                imageUri = it,
+                onSuccess = { },
+                onError = { msg -> errorMsg = msg }
             )
         }
+    }
 
-        Spacer(modifier = Modifier.height(28.dp))
+    val yaHayFecha = fechaNacimiento.isNotBlank()
 
-        Column(modifier = Modifier.padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            EditOption(label = "Editar nombre y edad", onClick = { showNombreDialog = true })
-            EditOption(label = "Cambiar descripción del perfil", onClick = { showDescripcionDialog = true })
+    Scaffold(snackbarHost = { SnackbarHost(snackbarHostState) }) { padding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.White)
+                .padding(padding)
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .statusBarsPadding()
+                    .padding(horizontal = 8.dp, vertical = 4.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                IconButton(onClick = onNavigateBack) {
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Volver", tint = KddTextPrimary)
+                }
+                Text("Editar perfil", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = 8.dp))
+            }
+
+            HorizontalDivider()
+            Spacer(modifier = Modifier.height(24.dp))
+
+            Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                Box(
+                    modifier = Modifier
+                        .size(88.dp)
+                        .clip(CircleShape)
+                        .clickable { imagePicker.launch("image/*") },
+                    contentAlignment = Alignment.Center
+                ) {
+                    if (!fotoPerfil.isNullOrBlank()) {
+                        AsyncImage(
+                            model = fotoPerfil,
+                            contentDescription = "Foto de perfil",
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier.fillMaxSize()
+                        )
+                    } else {
+                        Box(
+                            modifier = Modifier.fillMaxSize().background(KddSurfaceVariant),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                nombre.firstOrNull()?.uppercaseChar()?.toString() ?: "?",
+                                fontSize = 36.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = KddTextSecondary
+                            )
+                        }
+                    }
+                    Box(
+                        modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.35f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        if (subiendoFoto) {
+                            CircularProgressIndicator(modifier = Modifier.size(28.dp), color = Color.White, strokeWidth = 2.dp)
+                        } else {
+                            Icon(Icons.Filled.CameraAlt, contentDescription = "Cambiar foto", tint = Color.White, modifier = Modifier.size(28.dp))
+                        }
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(6.dp))
+            Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                Text("Toca para cambiar foto", style = MaterialTheme.typography.labelSmall, color = KddTextHint)
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+            Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(
+                    nombreUsuario.ifBlank { nombre.ifBlank { "..." } },
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = KddTextPrimary
+                )
+                if (nombreUsuario.isNotBlank()) {
+                    Text(nombre, style = MaterialTheme.typography.bodySmall, color = KddTextHint)
+                }
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    if (descripcion.isNotBlank()) descripcion else "Sin descripción",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = if (descripcion.isNotBlank()) KddTextSecondary else KddTextHint
+                )
+            }
+
+            Spacer(modifier = Modifier.height(28.dp))
+
+            Column(modifier = Modifier.padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                EditOption(
+                    label = "Nombre de usuario y descripción",
+                    sublabel = if (nombreUsuario.isNotBlank()) "@$nombreUsuario" else "No establecido",
+                    onClick = { showNombreDialog = true }
+                )
+                EditOption(
+                    label = "Fecha de nacimiento",
+                    sublabel = if (yaHayFecha) runCatching {
+                        LocalDate.parse(fechaNacimiento).format(DateTimeFormatter.ofPattern("dd/MM/yyyy"))
+                    }.getOrDefault(fechaNacimiento) else "No establecida",
+                    locked = yaHayFecha,
+                    onClick = { if (yaHayFecha) showFechaWarning = true else showFechaDialog = true }
+                )
+            }
         }
+    }
+
+    if (showFechaWarning) {
+        AlertDialog(
+            onDismissRequest = { showFechaWarning = false },
+            title = { Text("No se puede modificar") },
+            text = { Text("La fecha de nacimiento no puede cambiarse una vez establecida. Si hay un error, contacta con soporte.") },
+            confirmButton = {
+                TextButton(onClick = { showFechaWarning = false }) { Text("Entendido", color = KddPurple) }
+            }
+        )
     }
 
     if (showNombreDialog) {
         var tempNombre by remember { mutableStateOf(nombre) }
-        var tempEdad by remember { mutableStateOf(edad) }
+        var tempNombreUsuario by remember { mutableStateOf(nombreUsuario) }
+        var tempDesc by remember { mutableStateOf(descripcion) }
+
         Dialog(onDismissRequest = { showNombreDialog = false }) {
             Card(shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
-                Column(modifier = Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                    Text("Editar nombre y edad", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                    OutlinedTextField(value = tempNombre, onValueChange = { tempNombre = it }, label = { Text("Nombre") }, singleLine = true, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(10.dp), colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = KddPurple, unfocusedBorderColor = KddDivider))
-                    OutlinedTextField(value = tempEdad, onValueChange = { tempEdad = it.filter { c -> c.isDigit() }.take(3) }, label = { Text("Edad") }, singleLine = true, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(10.dp), colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = KddPurple, unfocusedBorderColor = KddDivider))
+                Column(modifier = Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                    Text("Nombre y descripción", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    OutlinedTextField(
+                        value = tempNombre,
+                        onValueChange = { tempNombre = it },
+                        label = { Text("Nombre real") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(10.dp),
+                        colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = KddPurple, unfocusedBorderColor = KddDivider)
+                    )
+                    OutlinedTextField(
+                        value = tempNombreUsuario,
+                        onValueChange = { if (it.length <= 20) tempNombreUsuario = it },
+                        label = { Text("Nombre de usuario (alias)") },
+                        placeholder = { Text("Ej: pepegrillo92", color = KddTextHint) },
+                        singleLine = true,
+                        colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = KddPurple, unfocusedBorderColor = KddDivider)
+                    )
+                    OutlinedTextField(
+                        value = tempDesc,
+                        onValueChange = { if (it.length <= 150) tempDesc = it },
+                        label = { Text("Descripción") },
+                        placeholder = { Text("Cuéntanos algo sobre ti", color = KddTextHint) },
+                        singleLine = false,
+                        maxLines = 3,
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(10.dp),
+                        colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = KddPurple, unfocusedBorderColor = KddDivider)
+                    )
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                        TextButton(onClick = { showNombreDialog = false }) { Text("Cancelar", color = KddTextSecondary) }
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Button(
-                            onClick = {
-                                viewModel.editarPerfil(
-                                    nombre = tempNombre.trim(),
-                                    descripcion = descripcion,
-                                    edad = tempEdad.toIntOrNull(),
-                                    onSuccess = {
-                                        nombre = tempNombre.trim()
-                                        edad = tempEdad
-                                        showNombreDialog = false
-                                    },
-                                    onError = { showNombreDialog = false }
-                                )
-                            },
-                            colors = ButtonDefaults.buttonColors(containerColor = KddPurple),
-                            shape = RoundedCornerShape(10.dp)
-                        ) { Text("Guardar") }
+                        TextButton(onClick = { showNombreDialog = false }) { Text("Cancelar") }
+                        TextButton(onClick = {
+                            viewModel.editarPerfil(
+                                nombre = tempNombre,
+                                nombreUsuario = tempNombreUsuario.ifBlank { null },
+                                descripcion = tempDesc,
+                                fechaNacimiento = null,
+                                onSuccess = {
+                                    nombre = tempNombre
+                                    nombreUsuario = tempNombreUsuario
+                                    descripcion = tempDesc
+                                    showNombreDialog = false
+                                },
+                                onError = { errorMsg = it }
+                            )
+                        }) { Text("Guardar", color = KddPurple) }
                     }
                 }
             }
         }
     }
 
-    if (showDescripcionDialog) {
-        var tempDesc by remember { mutableStateOf(descripcion) }
-        Dialog(onDismissRequest = { showDescripcionDialog = false }) {
-            Card(shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
-                Column(modifier = Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                    Text("Descripción del perfil", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                    OutlinedTextField(value = tempDesc, onValueChange = { if (it.length <= 200) tempDesc = it }, placeholder = { Text("Cuéntanos algo sobre ti...", color = KddTextHint) }, modifier = Modifier.fillMaxWidth().height(120.dp), shape = RoundedCornerShape(10.dp), colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = KddPurple, unfocusedBorderColor = KddDivider))
-                    Text("${tempDesc.length}/200", style = MaterialTheme.typography.labelSmall, color = KddTextHint, modifier = Modifier.align(Alignment.End))
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                        TextButton(onClick = { showDescripcionDialog = false }) { Text("Cancelar", color = KddTextSecondary) }
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Button(
-                            onClick = {
-                                viewModel.editarPerfil(
-                                    nombre = nombre,
-                                    descripcion = tempDesc,
-                                    edad = edad.toIntOrNull(),
-                                    onSuccess = {
-                                        descripcion = tempDesc
-                                        showDescripcionDialog = false
-                                    },
-                                    onError = { showDescripcionDialog = false }
-                                )
-                            },
-                            colors = ButtonDefaults.buttonColors(containerColor = KddPurple),
-                            shape = RoundedCornerShape(10.dp)
-                        ) { Text("Guardar") }
+    if (showFechaDialog) {
+        val datePickerState = rememberDatePickerState()
+        DatePickerDialog(
+            onDismissRequest = { showFechaDialog = false },
+            confirmButton = {
+                TextButton(onClick = {
+                    val millis = datePickerState.selectedDateMillis
+                    if (millis != null) {
+                        val cal = java.util.Calendar.getInstance().apply { timeInMillis = millis }
+                        val y = cal.get(java.util.Calendar.YEAR)
+                        val m = (cal.get(java.util.Calendar.MONTH) + 1).toString().padStart(2, '0')
+                        val d = cal.get(java.util.Calendar.DAY_OF_MONTH).toString().padStart(2, '0')
+                        fechaNacimiento = "$y-$m-$d"
+                        viewModel.editarPerfil(
+                            nombre = nombre,
+                            nombreUsuario = nombreUsuario.ifBlank { null },
+                            descripcion = descripcion,
+                            fechaNacimiento = fechaNacimiento,
+                            onSuccess = {},
+                            onError = { errorMsg = it }
+                        )
                     }
-                }
+                    showFechaDialog = false
+                }) { Text("Aceptar", color = KddPurple) }
+            },
+            dismissButton = {
+                TextButton(onClick = { showFechaDialog = false }) { Text("Cancelar") }
             }
+        ) {
+            DatePicker(state = datePickerState)
         }
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun EditOption(label: String, onClick: () -> Unit) {
-    Card(onClick = onClick, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp), colors = CardDefaults.cardColors(containerColor = KddSurface)) {
-        Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 16.dp), verticalAlignment = Alignment.CenterVertically) {
-            Text(label, style = MaterialTheme.typography.bodyMedium, color = KddTextPrimary, modifier = Modifier.weight(1f))
-            Icon(Icons.AutoMirrored.Filled.ArrowForwardIos, contentDescription = null, tint = KddTextHint, modifier = Modifier.size(14.dp))
+private fun EditOption(
+    label: String,
+    sublabel: String,
+    locked: Boolean = false,
+    onClick: () -> Unit
+) {
+    Card(
+        onClick = onClick,
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        shape = RoundedCornerShape(12.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 14.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(label, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold, color = KddTextPrimary)
+                Text(sublabel, style = MaterialTheme.typography.bodySmall, color = KddTextHint)
+            }
+            if (locked) {
+                Icon(Icons.Filled.Lock, contentDescription = null, tint = KddTextHint, modifier = Modifier.size(18.dp))
+            } else {
+                Icon(Icons.AutoMirrored.Filled.ArrowForwardIos, contentDescription = null, tint = KddTextHint, modifier = Modifier.size(16.dp))
+            }
         }
     }
 }

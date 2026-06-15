@@ -18,6 +18,12 @@ sealed class AmigosState {
     data class Error(val mensaje: String) : AmigosState()
 }
 
+sealed class SolicitudesState {
+    object Loading : SolicitudesState()
+    data class Success(val solicitudes: List<AmistadDto>) : SolicitudesState()
+    data class Error(val mensaje: String) : SolicitudesState()
+}
+
 sealed class MensajesState {
     object Loading : MensajesState()
     data class Success(val mensajes: List<MensajeDto>) : MensajesState()
@@ -31,6 +37,9 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
     private val _amigosState = MutableStateFlow<AmigosState>(AmigosState.Loading)
     val amigosState: StateFlow<AmigosState> = _amigosState
 
+    private val _solicitudesState = MutableStateFlow<SolicitudesState>(SolicitudesState.Success(emptyList()))
+    val solicitudesState: StateFlow<SolicitudesState> = _solicitudesState
+
     private val _mensajesState = MutableStateFlow<MensajesState>(MensajesState.Loading)
     val mensajesState: StateFlow<MensajesState> = _mensajesState
 
@@ -39,9 +48,12 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
 
     init {
         viewModelScope.launch {
+            val token = TokenDataStore.getToken(context).first()
+            if (token != null) ApiClient.jwtToken = token
             miUserId = TokenDataStore.getUserId(context).first() ?: -1L
+            cargarAmigos()
+            cargarSolicitudes()
         }
-        cargarAmigos()
     }
 
     fun cargarAmigos() {
@@ -60,33 +72,8 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun cargarConversacion(otroId: Long) {
-        viewModelScope.launch {
-            _mensajesState.value = MensajesState.Loading
-            try {
-                val response = ApiClient.api.getConversacion(otroId)
-                if (response.isSuccessful) {
-                    _mensajesState.value = MensajesState.Success(response.body() ?: emptyList())
-                } else {
-                    _mensajesState.value = MensajesState.Error("Error ${response.code()}")
-                }
-            } catch (e: Exception) {
-                _mensajesState.value = MensajesState.Error("No se pudo cargar la conversación")
-            }
-        }
-    }
-
-    fun enviarMensaje(otroId: Long, contenido: String, onSuccess: () -> Unit) {
+    fun cargarSolicitudes() {
         viewModelScope.launch {
             try {
-                val response = ApiClient.api.enviarMensaje(otroId, mapOf("contenido" to contenido))
+                val response = ApiClient.api.getSolicitudes()
                 if (response.isSuccessful) {
-                    cargarConversacion(otroId)
-                    onSuccess()
-                }
-            } catch (e: Exception) {
-                // error silencioso — el mensaje simplemente no se envía
-            }
-        }
-    }
-}
