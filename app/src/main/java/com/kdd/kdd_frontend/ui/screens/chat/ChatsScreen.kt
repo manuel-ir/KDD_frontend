@@ -58,12 +58,8 @@ fun ChatsScreen(
                 modifier = Modifier.padding(start = 8.dp)
             )
         }
-
         HorizontalDivider()
-
         LazyColumn(modifier = Modifier.fillMaxSize()) {
-
-            // --- Sección solicitudes pendientes ---
             val solicitudes = (solicitudesState as? SolicitudesState.Success)?.solicitudes ?: emptyList()
             if (solicitudes.isNotEmpty()) {
                 item {
@@ -91,8 +87,6 @@ fun ChatsScreen(
                 }
                 item { HorizontalDivider(thickness = 4.dp, color = KddSurface) }
             }
-
-            // --- Lista de amigos confirmados ---
             when (val estado = amigosState) {
                 is AmigosState.Loading -> {
                     item {

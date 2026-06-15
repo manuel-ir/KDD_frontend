@@ -106,7 +106,6 @@ fun EditProfileScreen(
             HorizontalDivider()
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Avatar clickable
             Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
                 Box(
                     modifier = Modifier
@@ -212,7 +211,6 @@ fun EditProfileScreen(
             Card(shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
                 Column(modifier = Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
                     Text("Nombre y descripción", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-
                     OutlinedTextField(
                         value = tempNombre,
                         onValueChange = { tempNombre = it },
@@ -222,19 +220,14 @@ fun EditProfileScreen(
                         shape = RoundedCornerShape(10.dp),
                         colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = KddPurple, unfocusedBorderColor = KddDivider)
                     )
-
                     OutlinedTextField(
                         value = tempNombreUsuario,
                         onValueChange = { if (it.length <= 20) tempNombreUsuario = it },
                         label = { Text("Nombre de usuario (alias)") },
                         placeholder = { Text("Ej: pepegrillo92", color = KddTextHint) },
                         singleLine = true,
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = KddPurple,
-                            unfocusedBorderColor = KddDivider
-                        )
+                        colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = KddPurple, unfocusedBorderColor = KddDivider)
                     )
-
                     OutlinedTextField(
                         value = tempDesc,
                         onValueChange = { if (it.length <= 150) tempDesc = it },
@@ -244,16 +237,9 @@ fun EditProfileScreen(
                         maxLines = 3,
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(10.dp),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = KddPurple,
-                            unfocusedBorderColor = KddDivider
-                        )
+                        colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = KddPurple, unfocusedBorderColor = KddDivider)
                     )
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.End
-                    ) {
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
                         TextButton(onClick = { showNombreDialog = false }) { Text("Cancelar") }
                         TextButton(onClick = {
                             viewModel.editarPerfil(
