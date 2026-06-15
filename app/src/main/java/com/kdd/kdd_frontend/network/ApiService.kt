@@ -61,6 +61,18 @@ interface ApiService {
     @DELETE("api/planes/{id}/abandonar")
     suspend fun abandonarPlan(@Path("id") id: Long): Response<Void>
 
+    @PUT("api/planes/{id}/foto")
+    suspend fun actualizarFotoPlan(@Path("id") id: Long, @Body body: Map<String, String>): Response<Void>
+
+    @GET("api/planes/historial")
+    suspend fun getHistorialPlanes(): Response<List<PlanDto>>
+
+    @DELETE("api/planes/{id}")
+    suspend fun eliminarPlan(@Path("id") id: Long): Response<Void>
+
+    @PUT("api/planes/{id}")
+    suspend fun editarPlan(@Path("id") id: Long, @Body body: CrearPlanDto): Response<PlanDto>
+
     // Comunidades
     @GET("api/comunidades")
     suspend fun getComunidades(): Response<List<ComunidadDto>>
@@ -79,6 +91,9 @@ interface ApiService {
 
     @GET("api/comunidades/{id}/miembros")
     suspend fun getMiembrosComunidad(@Path("id") id: Long): Response<List<MiembroComunidadDto>>
+
+    @GET("api/comunidades/{id}/planes")
+    suspend fun getPlanesComunidad(@Path("id") id: Long): Response<List<PlanDto>>
 
     // Amistades
     @GET("api/amistades")
