@@ -1,6 +1,7 @@
 package com.kdd.kdd_frontend.ui.screens.communities
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -27,6 +28,8 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.kdd.kdd_frontend.network.dto.MiembroComunidadDto
 import com.kdd.kdd_frontend.ui.components.PlanCard
+import com.kdd.kdd_frontend.ui.components.PlanCardData
+import com.kdd.kdd_frontend.network.dto.PlanDto
 import com.kdd.kdd_frontend.ui.components.*
 import com.kdd.kdd_frontend.ui.theme.*
 import com.kdd.kdd_frontend.viewmodel.ComunidadDetalleState
@@ -85,6 +88,21 @@ fun CommunityDetailScreen(
                         }
                         when {
                             comunidad.admin -> {
+                                OutlinedButton(
+                                    onClick = {
+                                        viewModel.abandonarComunidad(
+                                            id = communityId,
+                                            onSuccess = { onNavigateBack() },
+                                            onError = { msg -> errorMsg = msg }
+                                        )
+                                    },
+                                    modifier = Modifier.height(48.dp),
+                                    shape = RoundedCornerShape(24.dp),
+                                    colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFFE53935)),
+                                    border = BorderStroke(1.dp, Color(0xFFE53935))
+                                ) {
+                                    Text("Abandonar", fontWeight = FontWeight.SemiBold)
+                                }
                                 Button(
                                     onClick = onNavigateToCreatePlan,
                                     modifier = Modifier.weight(1f).height(48.dp),
@@ -265,7 +283,17 @@ fun CommunityDetailScreen(
                             } else {
                                 items(planesComunidad) { plan ->
                                     PlanCard(
-                                        data = plan,
+                                        data = PlanCardData(
+                                            id = plan.id,
+                                            titulo = plan.titulo,
+                                            categoria = plan.categoria ?: "",
+                                            descripcion = plan.descripcion ?: "",
+                                            dia = plan.fechaEvento ?: "Sin fecha",
+                                            hora = plan.horaEvento ?: "",
+                                            distanciaKm = "",
+                                            ubicacion = plan.ubicacionTexto,
+                                            anfitrionNombre = plan.anfitrionNombre ?: ""
+                                        ),
                                         onClick = { onNavigateToPlan(plan.id) }
                                     )
                                 }
@@ -373,21 +401,51 @@ private fun MemberCard(
             }
         }
         if (!esSoyYo) {
-            IconButton(
-                onClick = {
-                    if (!solicitudEnviada) {
-                        solicitudEnviada = true
-                        onAnadirAmigo(miembro.id)
-                    }
-                },
-                modifier = Modifier.size(36.dp)
-            ) {
-                Icon(
-                    imageVector = if (solicitudEnviada) Icons.Filled.Check else Icons.Filled.PersonAdd,
-                    contentDescription = if (solicitudEnviada) "Solicitud enviada" else "Añadir amigo",
-                    tint = if (solicitudEnviada) KddTextHint else KddPurple,
-                    modifier = Modifier.size(20.dp)
-                )
+            var menuExpandido by remember { mutableStateOf(false) }
+            Box {
+                IconButton(
+                    onClick = { menuExpandido = true },
+                    modifier = Modifier.size(36.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.MoreVert,
+                        contentDescription = "Opciones",
+                        tint = KddTextSecondary,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+                DropdownMenu(
+                    expanded = menuExpandido,
+                    onDismissRequest = { menuExpandido = false }
+                ) {
+                    DropdownMenuItem(
+                        text = {
+                            Text(if (solicitudEnviada) "Solicitud enviada" else "Agregar amigo")
+                        },
+                        onClick = {
+                            if (!solicitudEnviada) {
+                                solicitudEnviada = true
+                                onAnadirAmigo(miembro.id)
+                            }
+                            menuExpandido = false
+                        },
+                        leadingIcon = {
+                            Icon(
+                                if (solicitudEnviada) Icons.Filled.Check else Icons.Filled.PersonAdd,
+                                contentDescription = null,
+                                tint = if (solicitudEnviada) KddTextHint else KddPurple
+                            )
+                        },
+                        enabled = !solicitudEnviada
+                    )
+                    DropdownMenuItem(
+                        text = { Text("Bloquear") },
+                        onClick = { menuExpandido = false },
+                        leadingIcon = {
+                            Icon(Icons.Filled.Block, contentDescription = null, tint = KddTextSecondary)
+                        }
+                    )
+                }
             }
         }
     }
