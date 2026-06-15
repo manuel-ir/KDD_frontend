@@ -1,0 +1,155 @@
+package com.kdd.kdd_frontend.ui.screens.calendar
+
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.kdd.kdd_frontend.ui.components.*
+import com.kdd.kdd_frontend.ui.theme.*
+import com.kdd.kdd_frontend.viewmodel.PlanViewModel
+import com.kdd.kdd_frontend.viewmodel.PlanesState
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun CalendarScreen(
+    onNavigateToMain: () -> Unit,
+    onNavigateToExplore: () -> Unit,
+    onNavigateToCommunities: () -> Unit,
+    onNavigateToCreatePlan: () -> Unit,
+    onNavigateToCreateCommunity: () -> Unit,
+    onNavigateToPlan: (Long) -> Unit
+) {
+    var selectedTab by remember { mutableIntStateOf(0) }
+    val tabs = listOf("Próximos", "Historial")
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    var showBottomSheet by remember { mutableStateOf(false) }
+
+    val viewModel: PlanViewModel = viewModel()
+    val misPlanes by viewModel.misPlanes.collectAsState()
+    val historial by viewModel.historial.collectAsState()
+
+    LaunchedEffect(Unit) {
+        viewModel.cargarMisPlanes()
+        viewModel.cargarHistorial()
+    }
+
+    Scaffold(
+        bottomBar = {
+            BottomNavBar(
+                currentItem = BottomNavItem.CALENDAR,
+                onHomeClick = onNavigateToMain,
+                onExploreClick = onNavigateToExplore,
+                onCreateClick = { showBottomSheet = true },
+                onCommunitiesClick = onNavigateToCommunities,
+                onCalendarClick = { }
+            )
+        }
+    ) { paddingValues ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+        ) {
+            Text(
+                text = "Tus actividades",
+                style = MaterialTheme.typography.headlineLarge,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(start = 20.dp, top = 20.dp, bottom = 8.dp)
+            )
+
+            HorizontalDivider()
+
+            TabRow(
+                selectedTabIndex = selectedTab,
+                containerColor = Color.White,
+                contentColor = KddPurple
+            ) {
+                tabs.forEachIndexed { index, title ->
+                    Tab(
+                        selected = selectedTab == index,
+                        onClick = { selectedTab = index },
+                        text = {
+                            Text(
+                                text = title,
+                                fontWeight = if (selectedTab == index) FontWeight.Bold else FontWeight.Normal
+                            )
+                        }
+                    )
+                }
+            }
+
+            val estadoActual = if (selectedTab == 0) misPlanes else historial
+            val textoVacio = if (selectedTab == 0)
+                "Aquí no hay planes por el momento.\nCrea tu actividad"
+            else
+                "Aún no has participado en ningún plan finalizado"
+
+            when (val state = estadoActual) {
+                is PlanesState.Loading -> {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator(color = KddPurple)
+                    }
+                }
+                is PlanesState.Error -> {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Text(state.mensaje, color = KddTextSecondary)
+                    }
+                }
+                is PlanesState.Success -> {
+                    if (state.planes.isEmpty()) {
+                        Box(
+                            modifier = Modifier.weight(1f).fillMaxWidth(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                Text(
+                                    text = textoVacio,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = KddTextHint,
+                                    textAlign = TextAlign.Center
+                                )
+                                if (selectedTab == 0) {
+                                    Button(
+                                        onClick = onNavigateToCreatePlan,
+                                        colors = ButtonDefaults.buttonColors(containerColor = KddPurple)
+                                    ) {
+                                        Text("Crear actividad", color = Color.White)
+                                    }
+                                }
+                            }
+                        }
+                    } else {
+                        LazyColumn {
+                            items(state.planes) { plan ->
+                                PlanCard(
+                                    data = plan,
+                                    onClick = { onNavigateToPlan(plan.id) }
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    if (showBottomSheet) {
+        CreateBottomSheet(
+            sheetState = sheetState,
+            onDismiss = { showBottomSheet = false },
+            onNavigateToCreatePlan = onNavigateToCreatePlan,
+            onNavigateToCreateCommunity = onNavigateToCreateCommunity
+        )
+    }
+}

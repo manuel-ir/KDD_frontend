@@ -18,6 +18,7 @@ import com.kdd.kdd_frontend.ui.screens.explore.ExploreScreen
 import com.kdd.kdd_frontend.ui.screens.explore.FiltersScreen
 import com.kdd.kdd_frontend.ui.screens.main.MainScreen
 import com.kdd.kdd_frontend.ui.screens.plan.CreatePlanScreen
+import com.kdd.kdd_frontend.ui.screens.plan.EditPlanScreen
 import com.kdd.kdd_frontend.ui.screens.plan.PlanDetailScreen
 import com.kdd.kdd_frontend.ui.screens.profile.AccountScreen
 import com.kdd.kdd_frontend.ui.screens.profile.EditProfileScreen
@@ -51,7 +52,8 @@ fun NavGraph(navController: NavHostController) {
                 onNavigateToCreatePlan = { navController.navigate(Screen.CreatePlan.route) },
                 onNavigateToCreateCommunity = { navController.navigate(Screen.CreateCommunity.route) },
                 onNavigateToChats = { navController.navigate(Screen.Chats.route) },
-                onNavigateToAccount = { navController.navigate(Screen.Account.route) }
+                onNavigateToAccount = { navController.navigate(Screen.Account.route) },
+                onNavigateToPlan = { planId -> navController.navigate(Screen.PlanDetail.createRoute(planId)) }
             )
         }
 
@@ -119,7 +121,8 @@ fun NavGraph(navController: NavHostController) {
         ) { backStackEntry ->
             PlanDetailScreen(
                 planId = backStackEntry.arguments?.getLong("planId") ?: 0L,
-                onNavigateBack = { navController.popBackStack() }
+                onNavigateBack = { navController.popBackStack() },
+                onNavigateToEditPlan = { planId -> navController.navigate(Screen.EditPlan.createRoute(planId)) }
             )
         }
 
@@ -128,6 +131,18 @@ fun NavGraph(navController: NavHostController) {
             CreatePlanScreen(
                 onNavigateBack = { navController.popBackStack() },
                 onPlanCreated = { navController.popBackStack() }
+            )
+        }
+
+        // Edit Plan
+        composable(
+            route = Screen.EditPlan.route,
+            arguments = listOf(navArgument("planId") { type = NavType.LongType })
+        ) { backStackEntry ->
+            EditPlanScreen(
+                planId = backStackEntry.arguments?.getLong("planId") ?: 0L,
+                onNavigateBack = { navController.popBackStack() },
+                onPlanEditado = { navController.popBackStack() }
             )
         }
 
@@ -147,15 +162,19 @@ fun NavGraph(navController: NavHostController) {
         composable(Screen.Chats.route) {
             ChatsScreen(
                 onNavigateBack = { navController.popBackStack() },
-                onNavigateToChatDetail = { userId -> navController.navigate(Screen.ChatDetail.createRoute(userId)) }
+                onNavigateToChatDetail = { userId, nombre -> navController.navigate(Screen.ChatDetail.createRoute(userId, nombre)) }
             )
         }
         composable(
             route = Screen.ChatDetail.route,
-            arguments = listOf(navArgument("userId") { type = NavType.LongType })
+            arguments = listOf(
+                navArgument("userId") { type = NavType.LongType },
+                navArgument("nombre") { type = NavType.StringType }
+            )
         ) { backStackEntry ->
             ChatDetailScreen(
                 userId = backStackEntry.arguments?.getLong("userId") ?: 0L,
+                nombre = backStackEntry.arguments?.getString("nombre") ?: "",
                 onNavigateBack = { navController.popBackStack() }
             )
         }
