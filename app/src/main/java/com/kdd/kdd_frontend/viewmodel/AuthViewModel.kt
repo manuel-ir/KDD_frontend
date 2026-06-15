@@ -53,17 +53,20 @@ class AuthViewModel : ViewModel() {
                 }
             } catch (e: Exception) {
                 _authState.value = AuthState.Error(
-                    "No se pudo conectar con el servidor.\nComprueba que el backend está en 
-                    "No se pudo conectar con el servidor.\nComprueba que el backend está en marcha"
+                    "No se pudo conectar con el servidor. Comprueba que el backend está en marcha"
                 )
             }
         }
     }
 
+    fun resetState() {
+        _authState.value = AuthState.Idle
+    }
+
     private fun cargarPerfil() {
         viewModelScope.launch {
             try {
-                val response = ApiClient.api.getPerfilPropio()
+                val response = ApiClient.api.getMiPerfil()
                 if (response.isSuccessful) {
                     _usuario.value = response.body()
                 }
