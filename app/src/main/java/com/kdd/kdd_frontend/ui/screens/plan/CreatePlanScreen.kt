@@ -58,7 +58,8 @@ val EU_LANGUAGES = listOf(
 @Composable
 fun CreatePlanScreen(
     onNavigateBack: () -> Unit,
-    onPlanCreated: () -> Unit
+    onPlanCreated: () -> Unit,
+    communityId: Long = -1L
 ) {
     val viewModel: PlanViewModel = viewModel()
     val context = LocalContext.current

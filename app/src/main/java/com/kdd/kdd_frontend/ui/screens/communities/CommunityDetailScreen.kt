@@ -1,6 +1,7 @@
 package com.kdd.kdd_frontend.ui.screens.communities
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -385,21 +386,51 @@ private fun MemberCard(
             }
         }
         if (!esSoyYo) {
-            IconButton(
-                onClick = {
-                    if (!solicitudEnviada) {
-                        solicitudEnviada = true
-                        onAnadirAmigo(miembro.id)
-                    }
-                },
-                modifier = Modifier.size(36.dp)
-            ) {
-                Icon(
-                    imageVector = if (solicitudEnviada) Icons.Filled.Check else Icons.Filled.PersonAdd,
-                    contentDescription = if (solicitudEnviada) "Solicitud enviada" else "Añadir amigo",
-                    tint = if (solicitudEnviada) KddTextHint else KddPurple,
-                    modifier = Modifier.size(20.dp)
-                )
+            var menuExpandido by remember { mutableStateOf(false) }
+            Box {
+                IconButton(
+                    onClick = { menuExpandido = true },
+                    modifier = Modifier.size(36.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.MoreVert,
+                        contentDescription = "Opciones",
+                        tint = KddTextSecondary,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+                DropdownMenu(
+                    expanded = menuExpandido,
+                    onDismissRequest = { menuExpandido = false }
+                ) {
+                    DropdownMenuItem(
+                        text = {
+                            Text(if (solicitudEnviada) "Solicitud enviada" else "Agregar amigo")
+                        },
+                        onClick = {
+                            if (!solicitudEnviada) {
+                                solicitudEnviada = true
+                                onAnadirAmigo(miembro.id)
+                            }
+                            menuExpandido = false
+                        },
+                        leadingIcon = {
+                            Icon(
+                                if (solicitudEnviada) Icons.Filled.Check else Icons.Filled.PersonAdd,
+                                contentDescription = null,
+                                tint = if (solicitudEnviada) KddTextHint else KddPurple
+                            )
+                        },
+                        enabled = !solicitudEnviada
+                    )
+                    DropdownMenuItem(
+                        text = { Text("Bloquear") },
+                        onClick = { menuExpandido = false },
+                        leadingIcon = {
+                            Icon(Icons.Filled.Block, contentDescription = null, tint = KddTextSecondary)
+                        }
+                    )
+                }
             }
         }
     }

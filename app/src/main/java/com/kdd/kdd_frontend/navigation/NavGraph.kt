@@ -107,10 +107,24 @@ fun NavGraph(navController: NavHostController) {
             route = Screen.CommunityDetail.route,
             arguments = listOf(navArgument("communityId") { type = NavType.LongType })
         ) { backStackEntry ->
+            val communityId = backStackEntry.arguments?.getLong("communityId") ?: 0L
             CommunityDetailScreen(
-                communityId = backStackEntry.arguments?.getLong("communityId") ?: 0L,
+                communityId = communityId,
                 onNavigateBack = { navController.popBackStack() },
-                onNavigateToPlan = { planId -> navController.navigate(Screen.PlanDetail.createRoute(planId)) }
+                onNavigateToPlan = { planId -> navController.navigate(Screen.PlanDetail.createRoute(planId)) },
+                onNavigateToCreatePlan = { navController.navigate(Screen.CreatePlanForCommunity.createRoute(communityId)) }
+            )
+        }
+
+        composable(
+            route = Screen.CreatePlanForCommunity.route,
+            arguments = listOf(navArgument("communityId") { type = NavType.LongType })
+        ) { backStackEntry ->
+            val communityId = backStackEntry.arguments?.getLong("communityId") ?: -1L
+            CreatePlanScreen(
+                onNavigateBack = { navController.popBackStack() },
+                onPlanCreated = { navController.popBackStack() },
+                communityId = communityId
             )
         }
 
@@ -192,9 +206,4 @@ fun NavGraph(navController: NavHostController) {
             )
         }
         composable(Screen.EditProfile.route) {
-            EditProfileScreen(
-                onNavigateBack = { navController.popBackStack() }
-            )
-        }
-    }
-}
+            EditProfil

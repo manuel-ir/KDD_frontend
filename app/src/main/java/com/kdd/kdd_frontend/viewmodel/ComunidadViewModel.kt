@@ -100,6 +100,17 @@ class ComunidadViewModel(application: Application) : AndroidViewModel(applicatio
         }
     }
 
+    fun cargarPlanesComunidad(id: Long) {
+        viewModelScope.launch {
+            try {
+                val response = ApiClient.api.getPlanesComunidad(id)
+                if (response.isSuccessful) {
+                    _planesComunidad.value = response.body()?.map { it.toPlanCardData() } ?: emptyList()
+                }
+            } catch (e: Exception) { /* silencioso */ }
+        }
+    }
+
     fun unirseAComunidad(id: Long, onSuccess: () -> Unit, onError: (String) -> Unit) {
         viewModelScope.launch {
             try {
