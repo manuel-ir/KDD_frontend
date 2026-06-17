@@ -18,9 +18,8 @@ import java.util.concurrent.TimeUnit
  */
 object ApiClient {
 
-    // Backend local para pruebas (10.0.2.2 = localhost del ordenador desde el emulador)
-    // Cambiar a "https://kdd-backend.onrender.com/" antes de subir a produccion
-    private const val BASE_URL = "http://10.0.2.2:8080/"
+    // Backend en produccion (Render)
+    private const val BASE_URL = "https://kdd-backend.onrender.com/"
 
     // Token JWT guardado en memoria (se actualiza al hacer login)
     var jwtToken: String? = null
