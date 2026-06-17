@@ -25,7 +25,17 @@ import com.kdd.kdd_frontend.network.dto.MensajeDto
 import com.kdd.kdd_frontend.ui.theme.*
 import com.kdd.kdd_frontend.viewmodel.ChatViewModel
 import com.kdd.kdd_frontend.viewmodel.MensajesState
+import kotlinx.coroutines.launch
 
+/**
+ * Pantalla de chat directo entre dos usuarios.
+ *
+ * Muestra el historial de mensajes y permite enviar nuevos mensajes.
+ * Los mensajes se actualizan automaticamente cada 3 segundos (sondeo)
+ * mientras la pantalla esta abierta. Al salir, el sondeo se detiene.
+ *
+ * Tambien permite eliminar al amigo, borrar los mensajes o reportar al usuario.
+ */
 @Composable
 fun ChatDetailScreen(
     userId: Long,
@@ -37,14 +47,26 @@ fun ChatDetailScreen(
 
     var mensaje by remember { mutableStateOf("") }
     val listState = rememberLazyListState()
+    var mostrarConfirmBorrarAmigo by remember { mutableStateOf(false) }
+    var mostrarConfirmBorrarChat by remember { mutableStateOf(false) }
+    val snackbarHostState = remember { SnackbarHostState() }
+    var amigoEliminado by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
 
     LaunchedEffect(userId) {
         viewModel.cargarConversacion(userId)
+        viewModel.startPolling(userId)
     }
 
+    DisposableEffect(userId) {
+        onDispose { viewModel.stopPolling() }
+    }
+
+    Scaffold(snackbarHost = { SnackbarHost(snackbarHostState) }) { innerPadding ->
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .padding(innerPadding)
             .background(Color.White)
     ) {
         Surface(shadowElevation = 2.dp) {
@@ -92,8 +114,24 @@ fun ChatDetailScreen(
                         expanded = menuExpanded,
                         onDismissRequest = { menuExpanded = false }
                     ) {
+                        if (!amigoEliminado) {
+                            DropdownMenuItem(
+                                text = { Text("Eliminar amigo", color = androidx.compose.ui.graphics.Color(0xFFE53935)) },
+                                onClick = {
+                                    menuExpanded = false
+                                    mostrarConfirmBorrarAmigo = true
+                                }
+                            )
+                        }
                         DropdownMenuItem(
-                            text = { Text("Borrar amigo") },
+                            text = { Text("Borrar mensajes") },
+                            onClick = {
+                                menuExpanded = false
+                                mostrarConfirmBorrarChat = true
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Bloquear usuario") },
                             onClick = { menuExpanded = false }
                         )
                         DropdownMenuItem(
@@ -185,6 +223,52 @@ fun ChatDetailScreen(
                 }
             }
         }
+    }
+    } // cierre Scaffold
+
+    if (mostrarConfirmBorrarAmigo) {
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { mostrarConfirmBorrarAmigo = false },
+            title = { Text("Eliminar amigo") },
+            text = { Text("¿Seguro que quieres eliminar a $nombre de tu lista de amigos? El historial de mensajes se conservará.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    mostrarConfirmBorrarAmigo = false
+                    viewModel.eliminarAmigo(
+                        amigoId = userId,
+                        onSuccess = {
+                            amigoEliminado = true
+                            scope.launch { snackbarHostState.showSnackbar("$nombre eliminado de tus amigos") }
+                        },
+                        onError = { msg ->
+                            scope.launch { snackbarHostState.showSnackbar(msg) }
+                        }
+                    )
+                }) { Text("Eliminar", color = androidx.compose.ui.graphics.Color(0xFFE53935)) }
+            },
+            dismissButton = {
+                TextButton(onClick = { mostrarConfirmBorrarAmigo = false }) { Text("Cancelar") }
+            }
+        )
+    }
+
+    if (mostrarConfirmBorrarChat) {
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { mostrarConfirmBorrarChat = false },
+            title = { Text("Borrar mensajes") },
+            text = { Text("¿Seguro que quieres borrar todos los mensajes de esta conversación?") },
+            confirmButton = {
+                TextButton(onClick = {
+                    mostrarConfirmBorrarChat = false
+                    viewModel.borrarMensajes(userId, onSuccess = {
+                        scope.launch { snackbarHostState.showSnackbar("Mensajes borrados") }
+                    })
+                }) { Text("Borrar", color = androidx.compose.ui.graphics.Color(0xFFE53935)) }
+            },
+            dismissButton = {
+                TextButton(onClick = { mostrarConfirmBorrarChat = false }) { Text("Cancelar") }
+            }
+        )
     }
 }
 

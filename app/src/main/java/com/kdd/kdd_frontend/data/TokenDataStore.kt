@@ -13,6 +13,15 @@ import kotlinx.coroutines.flow.map
 
 val Context.tokenDataStore: DataStore<Preferences> by preferencesDataStore(name = "kdd_session")
 
+/**
+ * Almacen persistente del token JWT del usuario.
+ *
+ * Usa Jetpack DataStore (Preferences) para guardar el token de sesion
+ * de forma segura en el dispositivo. Es la alternativa moderna a SharedPreferences.
+ *
+ * El token se guarda cuando el usuario inicia sesion y se borra al cerrarla.
+ * Al arrancar la app, se lee este token para saber si hay sesion activa.
+ */
 object TokenDataStore {
 
     private val KEY_JWT        = stringPreferencesKey("jwt_token")

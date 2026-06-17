@@ -1,5 +1,8 @@
 package com.kdd.kdd_frontend.ui.screens.communities
 
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -18,14 +21,23 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.viewmodel.compose.viewModel
+import coil.compose.AsyncImage
 import com.kdd.kdd_frontend.ui.screens.plan.CATEGORIAS_PREDEFINIDAS
 import com.kdd.kdd_frontend.ui.theme.*
 import com.kdd.kdd_frontend.viewmodel.ComunidadViewModel
 
+/**
+ * Pantalla para crear una nueva comunidad.
+ *
+ * El usuario rellena el nombre, descripcion, restriccion de edad
+ * e idioma de la comunidad. Al confirmar, se envia al backend
+ * y se navega al detalle de la comunidad recien creada.
+ */
 @Composable
 fun CreateCommunityScreen(
     onNavigateBack: () -> Unit,
@@ -43,6 +55,28 @@ fun CreateCommunityScreen(
     var showCategoriasDialog by remember { mutableStateOf(false) }
     var cargando by remember { mutableStateOf(false) }
     var errorMsg by remember { mutableStateOf<String?>(null) }
+    var fotoComunidadUri by remember { mutableStateOf<Uri?>(null) }
+    var fotoComunidadUrl by remember { mutableStateOf<String?>(null) }
+    var subiendoFoto by remember { mutableStateOf(false) }
+
+    val imagePicker = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri ->
+        uri?.let {
+            fotoComunidadUri = it
+            subiendoFoto = true
+            viewModel.subirFotoComunidad(
+                imageUri = it,
+                onSuccess = { url ->
+                    fotoComunidadUrl = url
+                    subiendoFoto = false
+                },
+                onError = {
+                    subiendoFoto = false
+                }
+            )
+        }
+    }
 
     val formValido = titulo.isNotBlank() &&
             categoria.isNotBlank() && (categoria != "Personalizada" || categoriaPersonalizada.isNotBlank())
@@ -209,39 +243,57 @@ fun CreateCommunityScreen(
                         .height(140.dp)
                         .clip(RoundedCornerShape(12.dp))
                         .background(KddSurface)
-                        .border(1.dp, KddDivider, RoundedCornerShape(12.dp)),
+                        .border(1.dp, if (fotoComunidadUri != null) KddPurple.copy(alpha = 0.4f) else KddDivider, RoundedCornerShape(12.dp))
+                        .clickable { imagePicker.launch("image/*") },
                     contentAlignment = Alignment.Center
                 ) {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.Center
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(48.dp)
-                                .clip(CircleShape)
-                                .background(KddPurple.copy(alpha = 0.1f)),
-                            contentAlignment = Alignment.Center
+                    if (fotoComunidadUri != null) {
+                        AsyncImage(
+                            model = fotoComunidadUri,
+                            contentDescription = "Foto de la comunidad",
+                            modifier = Modifier.fillMaxSize(),
+                            contentScale = ContentScale.Crop
+                        )
+                        if (subiendoFoto) {
+                            Box(
+                                modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.4f)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                CircularProgressIndicator(color = Color.White, strokeWidth = 3.dp)
+                            }
+                        }
+                    } else {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center
                         ) {
-                            Icon(
-                                Icons.Filled.AddAPhoto,
-                                contentDescription = null,
-                                tint = KddPurple,
-                                modifier = Modifier.size(24.dp)
+                            Box(
+                                modifier = Modifier
+                                    .size(48.dp)
+                                    .clip(CircleShape)
+                                    .background(KddPurple.copy(alpha = 0.1f)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    Icons.Filled.AddAPhoto,
+                                    contentDescription = null,
+                                    tint = KddPurple,
+                                    modifier = Modifier.size(24.dp)
+                                )
+                            }
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                text = "Añadir foto",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = KddPurple,
+                                fontWeight = FontWeight.Medium
+                            )
+                            Text(
+                                text = "Toca para seleccionar",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = KddTextHint
                             )
                         }
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            text = "Añadir foto",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = KddPurple,
-                            fontWeight = FontWeight.Medium
-                        )
-                        Text(
-                            text = "Toca para seleccionar",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = KddTextHint
-                        )
                     }
                 }
             }
@@ -267,6 +319,8 @@ fun CreateCommunityScreen(
                                 ubicacion = ubicacion.trim(),
                                 edadMin = edadMin.toInt(),
                                 edadMax = edadMax.toInt(),
+                                fotoComunidadUrl = fotoComunidadUrl,
+                                categoria = categoria.ifBlank { null },
                                 onSuccess = { onCommunityCreated() },
                                 onError = { msg ->
                                     cargando = false
@@ -280,13 +334,13 @@ fun CreateCommunityScreen(
                         .height(52.dp),
                     shape = RoundedCornerShape(26.dp),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = if (formValido && !cargando) KddYellow else KddDivider,
-                        contentColor = if (formValido && !cargando) Color.Black else KddTextHint
+                        containerColor = if (formValido && !cargando) KddPurple else KddDivider,
+                        contentColor = if (formValido && !cargando) Color.White else KddTextHint
                     ),
                     enabled = formValido && !cargando
                 ) {
                     if (cargando) {
-                        CircularProgressIndicator(modifier = Modifier.size(20.dp), color = Color.Black, strokeWidth = 2.dp)
+                        CircularProgressIndicator(modifier = Modifier.size(20.dp), color = Color.White, strokeWidth = 2.dp)
                     } else {
                         Text(
                             text = "Terminar",

@@ -25,6 +25,8 @@ android {
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         manifestPlaceholders["MAPS_API_KEY"] = localProperties.getProperty("MAPS_API_KEY") ?: ""
+        buildConfigField("String", "MAPS_API_KEY", "\"${localProperties.getProperty("MAPS_API_KEY") ?: ""}\"")
+
     }
 
     buildTypes {
@@ -73,6 +75,7 @@ dependencies {
     implementation(libs.datastore.preferences)
     implementation(libs.maps.compose)
     implementation(libs.play.services.location)
+    implementation("com.google.android.libraries.places:places:4.1.0")
     testImplementation(libs.junit)
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)

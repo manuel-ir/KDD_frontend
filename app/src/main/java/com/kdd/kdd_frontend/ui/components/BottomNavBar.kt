@@ -20,6 +20,13 @@ enum class BottomNavItem {
     HOME, EXPLORE, CREATE, COMMUNITIES, CALENDAR
 }
 
+/**
+ * Barra de navegacion inferior de la aplicacion.
+ *
+ * Muestra los iconos de las secciones principales: Mapa, Explora,
+ * Calendario, Chats, Comunidades y Perfil. Al pulsar cada icono
+ * navega a la pantalla correspondiente.
+ */
 @Composable
 fun BottomNavBar(
     currentItem: BottomNavItem,

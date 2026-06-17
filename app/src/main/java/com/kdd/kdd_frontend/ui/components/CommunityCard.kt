@@ -17,6 +17,10 @@ import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.kdd.kdd_frontend.ui.theme.*
 
+/**
+ * Tarjeta visual que representa una comunidad en la lista de comunidades.
+ * Muestra el nombre, descripcion y numero de miembros de la comunidad.
+ */
 data class CommunityCardData(
     val id: Long,
     val nombre: String,
@@ -27,7 +31,8 @@ data class CommunityCardData(
     val fotoUrl: String? = null,
     val adminNombre: String,
     val adminFotoUrl: String? = null,
-    val miembrosFotos: List<String?> = emptyList()
+    val miembrosFotos: List<String?> = emptyList(),
+    val categoria: String = ""
 )
 
 @Composable
@@ -98,16 +103,33 @@ fun CommunityCard(
                     }
                 }
 
-                // Nombre de la comunidad abajo-izquierda sobre la imagen
-                Text(
-                    text = data.nombre,
+                // Nombre y categoria abajo-izquierda sobre la imagen
+                Column(
                     modifier = Modifier
                         .align(Alignment.BottomStart)
                         .padding(12.dp),
-                    style = MaterialTheme.typography.titleMedium,
-                    color = Color.White,
-                    fontWeight = FontWeight.Bold
-                )
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Text(
+                        text = data.nombre,
+                        style = MaterialTheme.typography.titleMedium,
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold
+                    )
+                    if (data.categoria.isNotBlank()) {
+                        Surface(
+                            shape = RoundedCornerShape(6.dp),
+                            color = KddPurple.copy(alpha = 0.85f)
+                        ) {
+                            Text(
+                                text = data.categoria,
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = Color.White
+                            )
+                        }
+                    }
+                }
             }
 
             // Barra inferior

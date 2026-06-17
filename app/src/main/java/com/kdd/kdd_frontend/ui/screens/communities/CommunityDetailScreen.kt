@@ -35,6 +35,13 @@ import com.kdd.kdd_frontend.ui.theme.*
 import com.kdd.kdd_frontend.viewmodel.ComunidadDetalleState
 import com.kdd.kdd_frontend.viewmodel.ComunidadViewModel
 
+/**
+ * Pantalla de detalle de una comunidad.
+ *
+ * Muestra la informacion de la comunidad, sus miembros y los planes
+ * que tiene asociados. Permite unirse o abandonar la comunidad,
+ * y acceder al detalle de cada plan.
+ */
 @Composable
 fun CommunityDetailScreen(
     communityId: Long,
@@ -48,9 +55,11 @@ fun CommunityDetailScreen(
     val planesComunidad by viewModel.planesComunidad.collectAsState()
 
     var selectedTab by remember { mutableIntStateOf(0) }
-    val tabs = listOf("Información", "Actividades", "Miembros")
+    val tabs = listOf("Informacion", "Actividades", "Miembros")
     val snackbarHostState = remember { SnackbarHostState() }
     var errorMsg by remember { mutableStateOf<String?>(null) }
+    var mostrarConfirmAbandonar by remember { mutableStateOf(false) }
+    var mostrarMenu by remember { mutableStateOf(false) }
 
     LaunchedEffect(errorMsg) {
         errorMsg?.let { snackbarHostState.showSnackbar(it); errorMsg = null }
@@ -87,7 +96,7 @@ fun CommunityDetailScreen(
                             Icon(Icons.Filled.Share, contentDescription = "Compartir", tint = KddTextPrimary)
                         }
                         when {
-                            comunidad.admin -> {
+                            comunidad.admin || comunidad.miembro -> {
                                 Button(
                                     onClick = onNavigateToCreatePlan,
                                     modifier = Modifier.weight(1f).height(48.dp),
@@ -96,23 +105,11 @@ fun CommunityDetailScreen(
                                 ) {
                                     Icon(Icons.Filled.Add, contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp))
                                     Spacer(Modifier.width(6.dp))
-                                    Text("Añadir actividad", color = Color.White, fontWeight = FontWeight.SemiBold)
-                                }
-                            }
-                            comunidad.miembro -> {
-                                Button(
-                                    onClick = {
-                                        viewModel.abandonarComunidad(
-                                            id = communityId,
-                                            onSuccess = { viewModel.cargarDetalle(communityId) },
-                                            onError = { msg -> errorMsg = msg }
-                                        )
-                                    },
-                                    modifier = Modifier.weight(1f).height(48.dp),
-                                    shape = RoundedCornerShape(24.dp),
-                                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE53935))
-                                ) {
-                                    Text("Abandonar", color = Color.White, fontWeight = FontWeight.SemiBold)
+                                    Text(
+                                        if (comunidad.admin) "Añadir actividad" else "Crear actividad",
+                                        color = Color.White,
+                                        fontWeight = FontWeight.SemiBold
+                                    )
                                 }
                             }
                             else -> {
@@ -180,6 +177,49 @@ fun CommunityDetailScreen(
                                 Icon(Icons.Filled.Close, contentDescription = "Cerrar", tint = KddTextPrimary)
                             }
 
+                            // MoreVert para admins y miembros
+                            if (comunidad.admin || comunidad.miembro) {
+                                Box(
+                                    modifier = Modifier
+                                        .align(Alignment.TopEnd)
+                                        .padding(8.dp)
+                                        .statusBarsPadding()
+                                ) {
+                                    IconButton(
+                                        onClick = { mostrarMenu = true },
+                                        modifier = Modifier
+                                            .size(36.dp)
+                                            .clip(CircleShape)
+                                            .background(Color.White.copy(alpha = 0.8f))
+                                    ) {
+                                        Icon(Icons.Filled.MoreVert, contentDescription = "Opciones", tint = KddTextPrimary)
+                                    }
+                                    DropdownMenu(
+                                        expanded = mostrarMenu,
+                                        onDismissRequest = { mostrarMenu = false }
+                                    ) {
+                                        if (comunidad.admin) {
+                                            DropdownMenuItem(
+                                                text = { Text("Editar comunidad") },
+                                                leadingIcon = { Icon(Icons.Filled.Edit, contentDescription = null) },
+                                                onClick = {
+                                                    mostrarMenu = false
+                                                    errorMsg = "Editar comunidad estara disponible proximamente"
+                                                }
+                                            )
+                                        }
+                                        DropdownMenuItem(
+                                            text = { Text("Abandonar comunidad", color = Color(0xFFE53935)) },
+                                            leadingIcon = { Icon(Icons.Filled.ExitToApp, contentDescription = null, tint = Color(0xFFE53935)) },
+                                            onClick = {
+                                                mostrarMenu = false
+                                                mostrarConfirmAbandonar = true
+                                            }
+                                        )
+                                    }
+                                }
+                            }
+
                             Column(
                                 modifier = Modifier
                                     .align(Alignment.BottomStart)
@@ -192,7 +232,7 @@ fun CommunityDetailScreen(
                                     fontWeight = FontWeight.Bold
                                 )
                                 Text(
-                                    text = "Comunidad",
+                                    text = if (!comunidad.categoria.isNullOrBlank()) "Comunidad · ${comunidad.categoria}" else "Comunidad",
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = Color.White.copy(alpha = 0.85f)
                                 )
@@ -316,6 +356,27 @@ fun CommunityDetailScreen(
                 }
             }
         }
+    }
+
+    if (mostrarConfirmAbandonar) {
+        AlertDialog(
+            onDismissRequest = { mostrarConfirmAbandonar = false },
+            title = { Text("Abandonar comunidad") },
+            text = { Text("¿Seguro que quieres abandonar esta comunidad?") },
+            confirmButton = {
+                TextButton(onClick = {
+                    mostrarConfirmAbandonar = false
+                    viewModel.abandonarComunidad(
+                        id = communityId,
+                        onSuccess = { viewModel.cargarDetalle(communityId) },
+                        onError = { msg -> errorMsg = msg }
+                    )
+                }) { Text("Abandonar", color = Color(0xFFE53935)) }
+            },
+            dismissButton = {
+                TextButton(onClick = { mostrarConfirmAbandonar = false }) { Text("Cancelar") }
+            }
+        )
     }
 }
 

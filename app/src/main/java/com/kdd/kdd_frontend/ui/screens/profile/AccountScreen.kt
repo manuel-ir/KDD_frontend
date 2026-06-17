@@ -9,6 +9,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForwardIos
 import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.*
+import androidx.compose.ui.unit.sp
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -24,6 +25,13 @@ import com.kdd.kdd_frontend.ui.theme.*
 import com.kdd.kdd_frontend.viewmodel.PerfilState
 import com.kdd.kdd_frontend.viewmodel.PerfilViewModel
 
+/**
+ * Pantalla de perfil del usuario.
+ *
+ * Muestra el avatar, nombre, alias, descripcion, puntuacion media
+ * y la lista de amigos del usuario. Permite navegar a la pantalla
+ * de edicion de perfil y cerrar sesion.
+ */
 @Composable
 fun AccountScreen(
     onNavigateBack: () -> Unit,
@@ -96,14 +104,36 @@ fun AccountScreen(
                             Text(text = usuario.nombre, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = KddTextPrimary)
                             Text(text = usuario.email, style = MaterialTheme.typography.bodySmall, color = KddTextSecondary)
                             Spacer(modifier = Modifier.height(6.dp))
-                            Surface(shape = RoundedCornerShape(6.dp), color = KddSuccess.copy(alpha = 0.12f)) {
-                                Row(
-                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
-                                ) {
-                                    Icon(Icons.Filled.CheckCircle, contentDescription = null, tint = KddSuccess, modifier = Modifier.size(12.dp))
-                                    Text(text = "Vinculado con Google", style = MaterialTheme.typography.labelSmall, color = KddSuccess)
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                if (usuario.esGoogleUser) {
+                                    Surface(shape = RoundedCornerShape(6.dp), color = KddSuccess.copy(alpha = 0.12f)) {
+                                        Row(
+                                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                        ) {
+                                            Icon(Icons.Filled.CheckCircle, contentDescription = null, tint = KddSuccess, modifier = Modifier.size(12.dp))
+                                            Text(text = "Vinculado con Google", style = MaterialTheme.typography.labelSmall, color = KddSuccess)
+                                        }
+                                    }
+                                }
+                                val puntuacion = usuario.puntuacionMedia
+                                if (puntuacion != null) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(2.dp)
+                                    ) {
+                                        Icon(Icons.Filled.Star, contentDescription = null, tint = Color(0xFFFFC107), modifier = Modifier.size(13.dp))
+                                        Text(
+                                            text = String.format("%.1f", puntuacion),
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = KddTextSecondary,
+                                            fontSize = 11.sp
+                                        )
+                                    }
                                 }
                             }
                         }

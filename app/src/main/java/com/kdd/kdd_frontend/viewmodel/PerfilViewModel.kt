@@ -14,6 +14,13 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 
+/**
+ * ViewModel del perfil de usuario.
+ *
+ * Carga y actualiza los datos del perfil: nombre, alias, descripcion
+ * y foto de perfil. Tambien carga la lista de amigos y gestiona
+ * las solicitudes de amistad pendientes.
+ */
 sealed class PerfilState {
     object Loading : PerfilState()
     data class Success(val usuario: UsuarioDto) : PerfilState()

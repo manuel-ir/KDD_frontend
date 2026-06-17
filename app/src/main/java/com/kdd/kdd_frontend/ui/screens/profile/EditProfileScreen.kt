@@ -30,6 +30,13 @@ import com.kdd.kdd_frontend.ui.theme.*
 import com.kdd.kdd_frontend.viewmodel.PerfilViewModel
 import com.kdd.kdd_frontend.viewmodel.PerfilState
 
+/**
+ * Pantalla para editar el perfil del usuario.
+ *
+ * Permite cambiar el nombre de usuario (alias), la descripcion personal
+ * y la foto de perfil. El alias tiene un limite de 3 cambios totales.
+ * Los cambios se guardan en el backend al pulsar Guardar.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EditProfileScreen(
@@ -47,7 +54,9 @@ fun EditProfileScreen(
 
     var showNombreDialog by remember { mutableStateOf(false) }
     var showFechaDialog by remember { mutableStateOf(false) }
-    var showFechaWarning by remember { mutableStateOf(false) }
+    var showFechaWarning by remember { mutableStateOf(false) }       // cuando YA está puesta
+    var showFechaConfirmacion by remember { mutableStateOf(false) }  // antes de poner por primera vez
+    var fechaPendienteConfirmar by remember { mutableStateOf("") }
     var errorMsg by remember { mutableStateOf("") }
     val snackbarHostState = remember { SnackbarHostState() }
 
@@ -164,6 +173,21 @@ fun EditProfileScreen(
                     Text(nombre, style = MaterialTheme.typography.bodySmall, color = KddTextHint)
                 }
                 Spacer(modifier = Modifier.height(4.dp))
+                if (perfilState is PerfilState.Success) {
+                    val pm = (perfilState as PerfilState.Success).usuario.puntuacionMedia
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        modifier = Modifier.padding(bottom = 4.dp)
+                    ) {
+                        Icon(Icons.Filled.Star, contentDescription = null, tint = Color(0xFF2196F3), modifier = Modifier.size(14.dp))
+                        Text(
+                            text = if (pm != null) String.format("%.1f", pm) else "Sin valoraciones",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = KddTextHint
+                        )
+                    }
+                }
                 Text(
                     if (descripcion.isNotBlank()) descripcion else "Sin descripción",
                     style = MaterialTheme.typography.bodyMedium,
@@ -174,8 +198,14 @@ fun EditProfileScreen(
             Spacer(modifier = Modifier.height(28.dp))
 
             Column(modifier = Modifier.padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                val cambiosAlias = (perfilState as? PerfilState.Success)?.usuario?.contadorCambiosAlias ?: 0
+                val aliasLabel = when {
+                    cambiosAlias >= 3 -> "Alias y descripción · Sin cambios disponibles"
+                    nombreUsuario.isNotBlank() -> "Alias y descripción · ${3 - cambiosAlias} cambio${if (3 - cambiosAlias == 1) "" else "s"} restante${if (3 - cambiosAlias == 1) "" else "s"}"
+                    else -> "Alias y descripción"
+                }
                 EditOption(
-                    label = "Nombre de usuario y descripción",
+                    label = aliasLabel,
                     sublabel = if (nombreUsuario.isNotBlank()) "@$nombreUsuario" else "No establecido",
                     onClick = { showNombreDialog = true }
                 )
@@ -202,31 +232,71 @@ fun EditProfileScreen(
         )
     }
 
+    if (showFechaConfirmacion && fechaPendienteConfirmar.isNotBlank()) {
+        val fechaFormateada = runCatching {
+            LocalDate.parse(fechaPendienteConfirmar).format(DateTimeFormatter.ofPattern("dd/MM/yyyy"))
+        }.getOrDefault(fechaPendienteConfirmar)
+        AlertDialog(
+            onDismissRequest = { showFechaConfirmacion = false },
+            title = { Text("Confirmar fecha de nacimiento") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("Has seleccionado: $fechaFormateada")
+                    Text(
+                        "⚠️ Una vez guardada, la fecha de nacimiento no podrá cambiarse. Asegúrate de que es correcta.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color(0xFF795548)
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    fechaNacimiento = fechaPendienteConfirmar
+                    showFechaConfirmacion = false
+                    viewModel.editarPerfil(
+                        nombre = nombre,
+                        nombreUsuario = nombreUsuario.ifBlank { null },
+                        descripcion = descripcion,
+                        fechaNacimiento = fechaNacimiento,
+                        onSuccess = {},
+                        onError = { errorMsg = it }
+                    )
+                }) { Text("Confirmar", color = KddPurple) }
+            },
+            dismissButton = {
+                TextButton(onClick = { showFechaConfirmacion = false }) { Text("Cancelar") }
+            }
+        )
+    }
+
     if (showNombreDialog) {
-        var tempNombre by remember { mutableStateOf(nombre) }
         var tempNombreUsuario by remember { mutableStateOf(nombreUsuario) }
         var tempDesc by remember { mutableStateOf(descripcion) }
+        val contadorCambios = (perfilState as? PerfilState.Success)?.usuario?.contadorCambiosAlias ?: 0
+        val aliasAgotado = contadorCambios >= 3
+        val cambiosRestantes = (3 - contadorCambios).coerceAtLeast(0)
 
         Dialog(onDismissRequest = { showNombreDialog = false }) {
             Card(shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
                 Column(modifier = Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-                    Text("Nombre y descripción", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                    OutlinedTextField(
-                        value = tempNombre,
-                        onValueChange = { tempNombre = it },
-                        label = { Text("Nombre real") },
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(10.dp),
-                        colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = KddPurple, unfocusedBorderColor = KddDivider)
-                    )
+                    Text("Alias y descripción", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                     OutlinedTextField(
                         value = tempNombreUsuario,
-                        onValueChange = { if (it.length <= 20) tempNombreUsuario = it },
-                        label = { Text("Nombre de usuario (alias)") },
+                        onValueChange = { if (it.length <= 20 && !aliasAgotado) tempNombreUsuario = it },
+                        label = { Text("Alias (nombre de usuario)") },
                         placeholder = { Text("Ej: pepegrillo92", color = KddTextHint) },
                         singleLine = true,
-                        colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = KddPurple, unfocusedBorderColor = KddDivider)
+                        enabled = !aliasAgotado,
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(10.dp),
+                        colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = KddPurple, unfocusedBorderColor = KddDivider),
+                        supportingText = {
+                            if (aliasAgotado) {
+                                Text("Has alcanzado el límite de 3 cambios de alias", color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.labelSmall)
+                            } else if (nombreUsuario.isNotBlank()) {
+                                Text("Cambios restantes: $cambiosRestantes", color = KddTextHint, style = MaterialTheme.typography.labelSmall)
+                            }
+                        }
                     )
                     OutlinedTextField(
                         value = tempDesc,
@@ -243,12 +313,11 @@ fun EditProfileScreen(
                         TextButton(onClick = { showNombreDialog = false }) { Text("Cancelar") }
                         TextButton(onClick = {
                             viewModel.editarPerfil(
-                                nombre = tempNombre,
+                                nombre = nombre,
                                 nombreUsuario = tempNombreUsuario.ifBlank { null },
                                 descripcion = tempDesc,
                                 fechaNacimiento = null,
                                 onSuccess = {
-                                    nombre = tempNombre
                                     nombreUsuario = tempNombreUsuario
                                     descripcion = tempDesc
                                     showNombreDialog = false
@@ -274,17 +343,12 @@ fun EditProfileScreen(
                         val y = cal.get(java.util.Calendar.YEAR)
                         val m = (cal.get(java.util.Calendar.MONTH) + 1).toString().padStart(2, '0')
                         val d = cal.get(java.util.Calendar.DAY_OF_MONTH).toString().padStart(2, '0')
-                        fechaNacimiento = "$y-$m-$d"
-                        viewModel.editarPerfil(
-                            nombre = nombre,
-                            nombreUsuario = nombreUsuario.ifBlank { null },
-                            descripcion = descripcion,
-                            fechaNacimiento = fechaNacimiento,
-                            onSuccess = {},
-                            onError = { errorMsg = it }
-                        )
+                        fechaPendienteConfirmar = "$y-$m-$d"
+                        showFechaDialog = false
+                        showFechaConfirmacion = true
+                    } else {
+                        showFechaDialog = false
                     }
-                    showFechaDialog = false
                 }) { Text("Aceptar", color = KddPurple) }
             },
             dismissButton = {

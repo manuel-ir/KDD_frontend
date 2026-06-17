@@ -23,6 +23,21 @@ import com.kdd.kdd_frontend.ui.screens.plan.PlanDetailScreen
 import com.kdd.kdd_frontend.ui.screens.profile.AccountScreen
 import com.kdd.kdd_frontend.ui.screens.profile.EditProfileScreen
 
+/**
+ * Grafo de navegacion de la aplicacion.
+ *
+ * Define todas las pantallas (destinos) de la app y las rutas entre ellas.
+ * Usa Jetpack Navigation Compose para gestionar la pila de pantallas
+ * sin necesidad de gestionar el BackStack manualmente.
+ *
+ * Pantallas principales:
+ * - Login / Registro
+ * - Mapa principal (pantalla de inicio)
+ * - Explora, Calendario, Chats, Comunidades, Perfil
+ * - Detalle de plan, crear plan, editar plan
+ * - Detalle de comunidad, crear comunidad
+ * - Chat con un usuario concreto
+ */
 @Composable
 fun NavGraph(navController: NavHostController) {
     NavHost(
@@ -36,6 +51,7 @@ fun NavGraph(navController: NavHostController) {
                 onNavigateToRegister = { navController.navigate(Screen.Register.route) }
             )
         }
+        // Registro con email y contrasena
         composable(Screen.Register.route) {
             RegisterScreen(
                 onRegisterSuccess = { navController.navigate(Screen.Main.route) { popUpTo(Screen.Login.route) { inclusive = true } } },
@@ -71,7 +87,7 @@ fun NavGraph(navController: NavHostController) {
                 onNavigateBack = { navController.popBackStack() },
                 onNavigateToPlan = { planId -> navController.navigate(Screen.PlanDetail.createRoute(planId)) },
                 onNavigateToFilters = { navController.navigate(Screen.FiltersExplore.route) },
-                onNavigateToMain = { navController.navigate(Screen.Main.route) },
+                onNavigateToMain = { navController.popBackStack(Screen.Main.route, false) },
                 onNavigateToCommunities = { navController.navigate(Screen.Communities.route) },
                 onNavigateToCalendar = { navController.navigate(Screen.Calendar.route) },
                 onNavigateToCreatePlan = { navController.navigate(Screen.CreatePlan.route) },
@@ -94,7 +110,7 @@ fun NavGraph(navController: NavHostController) {
         // Communities
         composable(Screen.Communities.route) {
             CommunitiesScreen(
-                onNavigateToMain = { navController.navigate(Screen.Main.route) },
+                onNavigateToMain = { navController.popBackStack(Screen.Main.route, false) },
                 onNavigateToCommunityDetail = { id -> navController.navigate(Screen.CommunityDetail.createRoute(id)) },
                 onNavigateToFilters = { navController.navigate(Screen.FiltersCommunities.route) },
                 onNavigateToExplore = { navController.navigate(Screen.Explore.route) },
@@ -115,7 +131,6 @@ fun NavGraph(navController: NavHostController) {
                 onNavigateToCreatePlan = { navController.navigate(Screen.CreatePlanForCommunity.createRoute(communityId)) }
             )
         }
-
         composable(
             route = Screen.CreatePlanForCommunity.route,
             arguments = listOf(navArgument("communityId") { type = NavType.LongType })
@@ -123,7 +138,11 @@ fun NavGraph(navController: NavHostController) {
             val communityId = backStackEntry.arguments?.getLong("communityId") ?: -1L
             CreatePlanScreen(
                 onNavigateBack = { navController.popBackStack() },
-                onPlanCreated = { navController.popBackStack() },
+                onPlanCreated = { planId ->
+                    navController.navigate(Screen.PlanDetail.createRoute(planId)) {
+                        popUpTo(Screen.CreatePlanForCommunity.route) { inclusive = true }
+                    }
+                },
                 communityId = communityId
             )
         }
@@ -144,7 +163,11 @@ fun NavGraph(navController: NavHostController) {
         composable(Screen.CreatePlan.route) {
             CreatePlanScreen(
                 onNavigateBack = { navController.popBackStack() },
-                onPlanCreated = { navController.popBackStack() }
+                onPlanCreated = { planId ->
+                    navController.navigate(Screen.PlanDetail.createRoute(planId)) {
+                        popUpTo(Screen.CreatePlan.route) { inclusive = true }
+                    }
+                }
             )
         }
 
@@ -163,7 +186,7 @@ fun NavGraph(navController: NavHostController) {
         // Calendar
         composable(Screen.Calendar.route) {
             CalendarScreen(
-                onNavigateToMain = { navController.navigate(Screen.Main.route) },
+                onNavigateToMain = { navController.popBackStack(Screen.Main.route, false) },
                 onNavigateToExplore = { navController.navigate(Screen.Explore.route) },
                 onNavigateToCommunities = { navController.navigate(Screen.Communities.route) },
                 onNavigateToCreatePlan = { navController.navigate(Screen.CreatePlan.route) },
@@ -206,4 +229,9 @@ fun NavGraph(navController: NavHostController) {
             )
         }
         composable(Screen.EditProfile.route) {
-            EditProfil
+            EditProfileScreen(
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+    }
+}

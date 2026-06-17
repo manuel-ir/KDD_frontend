@@ -1,8 +1,16 @@
 package com.kdd.kdd_frontend.navigation
 
+/**
+ * Definicion de las rutas de navegacion de la app.
+ *
+ * Cada objeto sellado (sealed object) representa una pantalla y su ruta unica.
+ * Las rutas con argumentos (como planId o userId) usan el formato de plantilla
+ * de Navigation Compose: "ruta/{argumento}".
+ */
 sealed class Screen(val route: String) {
     // Auth
     object Login : Screen("login")
+    object EmailLogin : Screen("email_login")
     object Register : Screen("register")
 
     // Main con bottom nav

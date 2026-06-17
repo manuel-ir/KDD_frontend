@@ -29,12 +29,24 @@ import com.kdd.kdd_frontend.viewmodel.PlanViewModel
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.window.DialogProperties
+import coil.compose.AsyncImage
+import android.Manifest
+import android.content.pm.PackageManager
+import androidx.core.content.ContextCompat
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsDraggedAsState
+import com.google.android.gms.location.LocationServices
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
 import com.google.maps.android.compose.*
+import kotlinx.coroutines.tasks.await
 import android.location.Geocoder
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -54,11 +66,21 @@ val EU_LANGUAGES = listOf(
     "Finlandés", "Eslovaco", "Croata", "Lituano", "Letón"
 )
 
+/**
+ * Pantalla para crear un nuevo plan.
+ *
+ * El usuario rellena el titulo, descripcion, categoria, fecha, hora de inicio,
+ * hora de fin, ubicacion, aforo maximo, rango de edad e idioma.
+ * El slider "vas acompanado" es informativo: indica cuantas personas lleva
+ * el anfitrion consigo, pero no afecta al aforo maximo del plan.
+ *
+ * Al confirmar, se envia el plan al backend y se navega a su detalle.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CreatePlanScreen(
     onNavigateBack: () -> Unit,
-    onPlanCreated: () -> Unit,
+    onPlanCreated: (Long) -> Unit,
     communityId: Long = -1L
 ) {
     val viewModel: PlanViewModel = viewModel()
@@ -85,6 +107,17 @@ fun CreatePlanScreen(
     var edadMin by remember { mutableFloatStateOf(18f) }
     var edadMax by remember { mutableFloatStateOf(55f) }
 
+    // Interaction sources para detectar arrastre de sliders y deshabilitar scroll del padre
+    val isAcompanado = remember { MutableInteractionSource() }
+    val isMaxAcompanantes = remember { MutableInteractionSource() }
+    val isEdadStart = remember { MutableInteractionSource() }
+    val isEdadEnd = remember { MutableInteractionSource() }
+    val isDraggingAcompanado by isAcompanado.collectIsDraggedAsState()
+    val isDraggingMaxAcompanantes by isMaxAcompanantes.collectIsDraggedAsState()
+    val isDraggingEdadStart by isEdadStart.collectIsDraggedAsState()
+    val isDraggingEdadEnd by isEdadEnd.collectIsDraggedAsState()
+    val anySliderDragging = isDraggingAcompanado || isDraggingMaxAcompanantes || isDraggingEdadStart || isDraggingEdadEnd
+
     // Fechas y horas
     var fechaDesde by remember { mutableStateOf<LocalDate?>(null) }
     var horaDesde by remember { mutableStateOf<LocalTime?>(null) }
@@ -102,6 +135,28 @@ fun CreatePlanScreen(
     var showLocationPicker by remember { mutableStateOf(false) }
     var selectedLatLng by remember { mutableStateOf<LatLng?>(null) }
     var ubicacionNombre by remember { mutableStateOf("") }
+    var fotoPlanUri by remember { mutableStateOf<Uri?>(null) }
+    var fotoPlanUrl by remember { mutableStateOf<String?>(null) }
+    var subiendoFoto by remember { mutableStateOf(false) }
+
+    val imagePicker = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri ->
+        uri?.let {
+            fotoPlanUri = it
+            subiendoFoto = true
+            viewModel.subirFotoPlan(
+                imageUri = it,
+                onSuccess = { url ->
+                    fotoPlanUrl = url
+                    subiendoFoto = false
+                },
+                onError = {
+                    subiendoFoto = false
+                }
+            )
+        }
+    }
 
     val dateFormatter = DateTimeFormatter.ofPattern("dd/MM/yy")
     val timeFormatter = DateTimeFormatter.ofPattern("HH:mm")
@@ -122,7 +177,7 @@ fun CreatePlanScreen(
         HorizontalDivider()
 
         Column(
-            modifier = Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(16.dp),
+            modifier = Modifier.weight(1f).verticalScroll(rememberScrollState(), enabled = !anySliderDragging).padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(20.dp)
         ) {
             FormField(label = "Título", maxChars = 25, value = titulo, onValueChange = { if (it.length <= 25) titulo = it }, placeholder = "¿Cómo se llama tu actividad?")
@@ -166,13 +221,18 @@ fun CreatePlanScreen(
 
             // Desde
             Column {
-                Text("Desde", style = MaterialTheme.typography.bodySmall, color = KddTextSecondary)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text("Desde", style = MaterialTheme.typography.bodySmall, color = KddTextSecondary)
+                    Text(" *", style = MaterialTheme.typography.bodySmall, color = Color.Red)
+                }
                 Spacer(modifier = Modifier.height(6.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Button(
                         onClick = { showDateDesdeDialog = true },
                         modifier = Modifier.weight(1f),
-                        colors = ButtonDefaults.buttonColors(containerColor = KddPurple),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = if (fechaDesde != null) KddPurple else KddPurpleLight
+                        ),
                         shape = RoundedCornerShape(8.dp)
                     ) {
                         Icon(Icons.Filled.CalendarToday, contentDescription = null, modifier = Modifier.size(14.dp))
@@ -182,13 +242,24 @@ fun CreatePlanScreen(
                     Button(
                         onClick = { showTimeDesdeDialog = true },
                         modifier = Modifier.weight(1f),
-                        colors = ButtonDefaults.buttonColors(containerColor = KddPurple),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = if (horaDesde != null) KddPurple else KddPurpleLight
+                        ),
                         shape = RoundedCornerShape(8.dp)
                     ) {
                         Icon(Icons.Filled.Schedule, contentDescription = null, modifier = Modifier.size(14.dp))
                         Spacer(modifier = Modifier.width(4.dp))
                         Text(horaDesde?.format(timeFormatter) ?: "--:--", color = Color.White, fontSize = 13.sp)
                     }
+                }
+                if (fechaDesde == null || horaDesde == null) {
+                    Text(
+                        if (fechaDesde == null) "La fecha y hora de inicio son obligatorias"
+                        else "La hora de inicio es obligatoria",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = Color.Red,
+                        modifier = Modifier.padding(top = 4.dp)
+                    )
                 }
             }
 
@@ -250,11 +321,32 @@ fun CreatePlanScreen(
             // Foto
             Text("Personalizar", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = KddTextPrimary)
             Box(
-                modifier = Modifier.fillMaxWidth().height(100.dp).clip(RoundedCornerShape(12.dp)).border(1.dp, KddPurple.copy(alpha = 0.4f), RoundedCornerShape(12.dp)).background(Color.White),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(140.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .border(1.dp, KddPurple.copy(alpha = 0.4f), RoundedCornerShape(12.dp))
+                    .background(Color.White)
+                    .clickable { imagePicker.launch("image/*") },
                 contentAlignment = Alignment.Center
             ) {
-                TextButton(onClick = { /* TODO: seleccionar foto */ }) {
-                    Text("+ Añade tu propia foto", color = KddPurple)
+                if (fotoPlanUri != null) {
+                    AsyncImage(
+                        model = fotoPlanUri,
+                        contentDescription = "Foto del plan",
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop
+                    )
+                    if (subiendoFoto) {
+                        Box(modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.4f)), contentAlignment = Alignment.Center) {
+                            CircularProgressIndicator(color = Color.White, strokeWidth = 3.dp)
+                        }
+                    }
+                } else {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Icon(Icons.Filled.AddPhotoAlternate, contentDescription = null, tint = KddPurple, modifier = Modifier.size(32.dp))
+                        Text("+ Añade tu propia foto", color = KddPurple)
+                    }
                 }
             }
 
@@ -265,16 +357,18 @@ fun CreatePlanScreen(
 
             SliderField(
                 label = "¿Vas acompañado?",
-                sublabel = "${vasAcompanado.toInt()} persona${if (vasAcompanado > 1) "s" else ""} (incluyéndote)",
+                sublabel = "${vasAcompanado.toInt()} persona${if (vasAcompanado > 1) "s" else ""} (incluyéndote, solo informativo)",
                 value = vasAcompanado, onValueChange = { vasAcompanado = it },
-                valueRange = 1f..10f, steps = 8
+                valueRange = 1f..10f, steps = 8,
+                interactionSource = isAcompanado
             )
 
             SliderField(
-                label = "Máximo de acompañantes",
-                sublabel = "${maxAcompanantes.toInt()} personas (incluyéndote)",
+                label = "Aforo máximo (incluido tú)",
+                sublabel = if (maxAcompanantes.toInt() == 1) "Solo tú (plan privado)" else "${maxAcompanantes.toInt()} personas en total",
                 value = maxAcompanantes, onValueChange = { maxAcompanantes = it },
-                valueRange = 1f..50f
+                valueRange = 1f..50f,
+                interactionSource = isMaxAcompanantes
             )
 
             // Selector de idiomas
@@ -310,7 +404,9 @@ fun CreatePlanScreen(
                         value = edadMin..edadMax,
                         onValueChange = { range -> edadMin = range.start; edadMax = range.endInclusive },
                         valueRange = 18f..80f,
-                        colors = SliderDefaults.colors(thumbColor = KddPurple, activeTrackColor = KddPurple)
+                        colors = SliderDefaults.colors(thumbColor = KddPurple, activeTrackColor = KddPurple),
+                        startInteractionSource = isEdadStart,
+                        endInteractionSource = isEdadEnd
                     )
                 }
             }
@@ -322,7 +418,9 @@ fun CreatePlanScreen(
         Box(modifier = Modifier.padding(16.dp)) {
             val categoriaFinal = if (categoria == "Personalizada") categoriaPersonalizada.trim() else categoria
             val formValido = titulo.isNotBlank() && categoria.isNotBlank() &&
-                    (categoria != "Personalizada" || categoriaPersonalizada.isNotBlank())
+                    (categoria != "Personalizada" || categoriaPersonalizada.isNotBlank()) &&
+                    selectedLatLng != null &&
+                    fechaDesde != null && horaDesde != null
             Button(
                 onClick = {
                     if (formValido && !cargando) {
@@ -338,15 +436,19 @@ fun CreatePlanScreen(
                                     categoria = categoriaFinal,
                                     fechaEvento = fechaDesde?.format(apiFormatter),
                                     horaEvento = horaDesde?.format(DateTimeFormatter.ofPattern("HH:mm:ss")),
+                                    horaHasta = horaHasta?.format(DateTimeFormatter.ofPattern("HH:mm:ss")),
                                     ubicacionTexto = ubicacionNombre.ifBlank { null },
                                     latitud = selectedLatLng?.latitude,
                                     longitud = selectedLatLng?.longitude,
                                     edadMin = edadMin.toInt(),
                                     edadMax = edadMax.toInt(),
-                                    numMaxPersonas = (vasAcompanado + maxAcompanantes).toInt(),
-                                    idioma = idiomasSeleccionados.joinToString(", ").ifBlank { null }
+                                    numMaxPersonas = maxAcompanantes.toInt(),
+                                    acompanantes = vasAcompanado.toInt(),
+                                    idioma = idiomasSeleccionados.joinToString(", ").ifBlank { null },
+                                    fotoPlanUrl = fotoPlanUrl,
+                                    comunidadId = if (communityId > 0) communityId else null
                                 ),
-                                onSuccess = { onPlanCreated() },
+                                onSuccess = { planId -> onPlanCreated(planId) },
                                 onError = {
                                     cargando = false
                                     errorMsg = "Error al crear el plan. Comprueba los datos."
@@ -493,10 +595,37 @@ fun CreatePlanScreen(
 
     // ─── Location Picker ───
     if (showLocationPicker) {
+        val locationPermissionGranted = remember {
+            ContextCompat.checkSelfPermission(
+                context, Manifest.permission.ACCESS_FINE_LOCATION
+            ) == PackageManager.PERMISSION_GRANTED
+        }
+        val permissionLauncher = rememberLauncherForActivityResult(
+            ActivityResultContracts.RequestPermission()
+        ) { /* el mapa se actualizará solo al recomponerse */ }
+
+        LaunchedEffect(Unit) {
+            if (!locationPermissionGranted) {
+                permissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
+            }
+        }
+
+        var initialMapPosition by remember {
+            mutableStateOf(selectedLatLng ?: LatLng(40.4168, -3.7038))
+        }
+        LaunchedEffect(Unit) {
+            if (selectedLatLng == null && locationPermissionGranted) {
+                try {
+                    val fusedLocation = LocationServices.getFusedLocationProviderClient(context)
+                    val location = fusedLocation.lastLocation.await()
+                    if (location != null) {
+                        initialMapPosition = LatLng(location.latitude, location.longitude)
+                    }
+                } catch (_: Exception) { }
+            }
+        }
         val pickerCamera = rememberCameraPositionState {
-            position = CameraPosition.fromLatLngZoom(
-                selectedLatLng ?: LatLng(40.4168, -3.7038), 10f
-            )
+            position = CameraPosition.fromLatLngZoom(initialMapPosition, 14f)
         }
         var tempNombre by remember { mutableStateOf(ubicacionNombre) }
 
@@ -533,7 +662,11 @@ fun CreatePlanScreen(
                 GoogleMap(
                     modifier = Modifier.fillMaxSize(),
                     cameraPositionState = pickerCamera,
-                    uiSettings = MapUiSettings(zoomControlsEnabled = true, myLocationButtonEnabled = false),
+                    properties = MapProperties(isMyLocationEnabled = locationPermissionGranted),
+                    uiSettings = MapUiSettings(
+                        zoomControlsEnabled = false,
+                        myLocationButtonEnabled = locationPermissionGranted
+                    ),
                     onMapClick = { latLng ->
                         coroutineScope.launch {
                             pickerCamera.animate(CameraUpdateFactory.newLatLng(latLng))
@@ -641,7 +774,7 @@ fun CreatePlanScreen(
 }
 
 @Composable
-private fun TimePickerDialogKdd(
+fun TimePickerDialogKdd(
     onDismiss: () -> Unit,
     onConfirm: () -> Unit,
     content: @Composable () -> Unit
@@ -703,7 +836,8 @@ private fun SliderField(
     value: Float,
     onValueChange: (Float) -> Unit,
     valueRange: ClosedFloatingPointRange<Float> = 0f..100f,
-    steps: Int = 0
+    steps: Int = 0,
+    interactionSource: MutableInteractionSource = remember { MutableInteractionSource() }
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Text(label, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, color = KddTextPrimary)
@@ -713,6 +847,7 @@ private fun SliderField(
             onValueChange = onValueChange,
             valueRange = valueRange,
             steps = steps,
+            interactionSource = interactionSource,
             colors = SliderDefaults.colors(thumbColor = KddPurple, activeTrackColor = KddPurple)
         )
     }

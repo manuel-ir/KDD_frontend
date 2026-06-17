@@ -19,6 +19,10 @@ import androidx.compose.ui.unit.dp
 import com.kdd.kdd_frontend.ui.theme.*
 import kotlinx.coroutines.launch
 
+/**
+ * Hoja inferior (bottom sheet) para elegir que crear: un plan o una comunidad.
+ * Aparece al pulsar el boton de crear en la barra de navegacion inferior.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CreateBottomSheet(
