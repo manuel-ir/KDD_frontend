@@ -20,13 +20,23 @@ import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.kdd.kdd_frontend.ui.theme.*
 
+/**
+ * Tarjeta visual que representa un plan en las listas de la app.
+ *
+ * Muestra la informacion resumida del plan: imagen, titulo, categoria,
+ * descripcion, fecha, horario y ubicacion. Se usa en la pantalla Explora,
+ * el Calendario y el detalle de comunidad.
+ *
+ * PlanCardData es el modelo de datos que recibe este componente.
+ */
 data class PlanCardData(
     val id: Long,
     val titulo: String,
     val categoria: String,
     val descripcion: String,
-    val dia: String,
-    val hora: String,
+    val dia: String,           // raw yyyy-MM-dd para parsing en CalendarScreen
+    val hora: String,          // raw HH:mm o HH:mm:ss
+    val horaHasta: String? = null, // raw HH:mm o HH:mm:ss
     val distanciaKm: String,
     val ubicacion: String? = null,
     val fotoUrl: String? = null,
@@ -100,16 +110,25 @@ fun PlanCard(
                     .padding(horizontal = 12.dp, vertical = 10.dp)
             ) {
                 // Chips de día, hora, distancia y ubicación
+                val diaFormateado = runCatching {
+                    val d = java.time.LocalDate.parse(data.dia)
+                    "${d.dayOfMonth.toString().padStart(2,'0')}/${d.monthValue.toString().padStart(2,'0')}/${d.year}"
+                }.getOrDefault(data.dia)
+                val horaInicio = data.hora.takeIf { it.isNotBlank() }?.take(5)
+                val horaFin = data.horaHasta?.take(5)
+                val horarioChip = when {
+                    horaInicio != null && horaFin != null -> "$horaInicio – $horaFin"
+                    horaInicio != null -> horaInicio
+                    else -> null
+                }
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(6.dp),
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    InfoChip(text = data.dia)
-                    InfoChip(text = data.hora)
-                    InfoChip(text = data.distanciaKm)
-                    if (data.ubicacion != null) {
-                        InfoChip(text = data.ubicacion)
-                    }
+                    if (diaFormateado.isNotBlank()) InfoChip(text = diaFormateado)
+                    if (horarioChip != null) InfoChip(text = horarioChip)
+                    if (data.distanciaKm.isNotBlank()) InfoChip(text = data.distanciaKm)
+                    if (data.ubicacion != null) InfoChip(text = data.ubicacion)
                 }
 
                 Spacer(modifier = Modifier.height(8.dp))

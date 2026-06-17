@@ -2,6 +2,13 @@ package com.kdd.kdd_frontend.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
+/**
+ * Paleta de colores de la aplicacion KDD.
+ *
+ * Define todos los colores personalizados usados en la interfaz.
+ * El color principal es el morado KDD (KddPurple). Los demas colores
+ * estan pensados para fondos, texto, bordes y superficies.
+ */
 // Colores principales de KDD
 val KddYellow = Color(0xFFFFC107)
 val KddYellowDark = Color(0xFFE6A800)

@@ -1,6 +1,7 @@
 package com.kdd.kdd_frontend.ui.screens.communities
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -26,25 +27,39 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.kdd.kdd_frontend.network.dto.MiembroComunidadDto
+import com.kdd.kdd_frontend.ui.components.PlanCard
+import com.kdd.kdd_frontend.ui.components.PlanCardData
+import com.kdd.kdd_frontend.network.dto.PlanDto
 import com.kdd.kdd_frontend.ui.components.*
 import com.kdd.kdd_frontend.ui.theme.*
 import com.kdd.kdd_frontend.viewmodel.ComunidadDetalleState
 import com.kdd.kdd_frontend.viewmodel.ComunidadViewModel
 
+/**
+ * Pantalla de detalle de una comunidad.
+ *
+ * Muestra la informacion de la comunidad, sus miembros y los planes
+ * que tiene asociados. Permite unirse o abandonar la comunidad,
+ * y acceder al detalle de cada plan.
+ */
 @Composable
 fun CommunityDetailScreen(
     communityId: Long,
     onNavigateBack: () -> Unit,
-    onNavigateToPlan: (Long) -> Unit
+    onNavigateToPlan: (Long) -> Unit,
+    onNavigateToCreatePlan: () -> Unit = {}
 ) {
     val viewModel: ComunidadViewModel = viewModel()
     val detalleState by viewModel.detalleState.collectAsState()
     val miembros by viewModel.miembros.collectAsState()
+    val planesComunidad by viewModel.planesComunidad.collectAsState()
 
     var selectedTab by remember { mutableIntStateOf(0) }
-    val tabs = listOf("Información", "Actividades", "Miembros")
+    val tabs = listOf("Informacion", "Actividades", "Miembros")
     val snackbarHostState = remember { SnackbarHostState() }
     var errorMsg by remember { mutableStateOf<String?>(null) }
+    var mostrarConfirmAbandonar by remember { mutableStateOf(false) }
+    var mostrarMenu by remember { mutableStateOf(false) }
 
     LaunchedEffect(errorMsg) {
         errorMsg?.let { snackbarHostState.showSnackbar(it); errorMsg = null }
@@ -55,6 +70,7 @@ fun CommunityDetailScreen(
     }
 
     LaunchedEffect(selectedTab) {
+        if (selectedTab == 1) viewModel.cargarPlanesComunidad(communityId)
         if (selectedTab == 2) viewModel.cargarMiembros(communityId)
     }
 
@@ -80,32 +96,20 @@ fun CommunityDetailScreen(
                             Icon(Icons.Filled.Share, contentDescription = "Compartir", tint = KddTextPrimary)
                         }
                         when {
-                            comunidad.admin -> {
-                                // Eres el admin — sin botón de unirse/abandonar
-                                Surface(
-                                    modifier = Modifier.weight(1f).height(48.dp),
-                                    shape = RoundedCornerShape(24.dp),
-                                    color = KddSurface
-                                ) {
-                                    Box(contentAlignment = Alignment.Center) {
-                                        Text("Eres el admin", color = KddTextSecondary, fontWeight = FontWeight.SemiBold)
-                                    }
-                                }
-                            }
-                            comunidad.miembro -> {
+                            comunidad.admin || comunidad.miembro -> {
                                 Button(
-                                    onClick = {
-                                        viewModel.abandonarComunidad(
-                                            id = communityId,
-                                            onSuccess = { viewModel.cargarDetalle(communityId) },
-                                            onError = { msg -> errorMsg = msg }
-                                        )
-                                    },
+                                    onClick = onNavigateToCreatePlan,
                                     modifier = Modifier.weight(1f).height(48.dp),
                                     shape = RoundedCornerShape(24.dp),
-                                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE53935))
+                                    colors = ButtonDefaults.buttonColors(containerColor = KddPurple)
                                 ) {
-                                    Text("Abandonar", color = Color.White, fontWeight = FontWeight.SemiBold)
+                                    Icon(Icons.Filled.Add, contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp))
+                                    Spacer(Modifier.width(6.dp))
+                                    Text(
+                                        if (comunidad.admin) "Añadir actividad" else "Crear actividad",
+                                        color = Color.White,
+                                        fontWeight = FontWeight.SemiBold
+                                    )
                                 }
                             }
                             else -> {
@@ -173,6 +177,49 @@ fun CommunityDetailScreen(
                                 Icon(Icons.Filled.Close, contentDescription = "Cerrar", tint = KddTextPrimary)
                             }
 
+                            // MoreVert para admins y miembros
+                            if (comunidad.admin || comunidad.miembro) {
+                                Box(
+                                    modifier = Modifier
+                                        .align(Alignment.TopEnd)
+                                        .padding(8.dp)
+                                        .statusBarsPadding()
+                                ) {
+                                    IconButton(
+                                        onClick = { mostrarMenu = true },
+                                        modifier = Modifier
+                                            .size(36.dp)
+                                            .clip(CircleShape)
+                                            .background(Color.White.copy(alpha = 0.8f))
+                                    ) {
+                                        Icon(Icons.Filled.MoreVert, contentDescription = "Opciones", tint = KddTextPrimary)
+                                    }
+                                    DropdownMenu(
+                                        expanded = mostrarMenu,
+                                        onDismissRequest = { mostrarMenu = false }
+                                    ) {
+                                        if (comunidad.admin) {
+                                            DropdownMenuItem(
+                                                text = { Text("Editar comunidad") },
+                                                leadingIcon = { Icon(Icons.Filled.Edit, contentDescription = null) },
+                                                onClick = {
+                                                    mostrarMenu = false
+                                                    errorMsg = "Editar comunidad estara disponible proximamente"
+                                                }
+                                            )
+                                        }
+                                        DropdownMenuItem(
+                                            text = { Text("Abandonar comunidad", color = Color(0xFFE53935)) },
+                                            leadingIcon = { Icon(Icons.Filled.ExitToApp, contentDescription = null, tint = Color(0xFFE53935)) },
+                                            onClick = {
+                                                mostrarMenu = false
+                                                mostrarConfirmAbandonar = true
+                                            }
+                                        )
+                                    }
+                                }
+                            }
+
                             Column(
                                 modifier = Modifier
                                     .align(Alignment.BottomStart)
@@ -185,7 +232,7 @@ fun CommunityDetailScreen(
                                     fontWeight = FontWeight.Bold
                                 )
                                 Text(
-                                    text = "Comunidad",
+                                    text = if (!comunidad.categoria.isNullOrBlank()) "Comunidad · ${comunidad.categoria}" else "Comunidad",
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = Color.White.copy(alpha = 0.85f)
                                 )
@@ -249,14 +296,31 @@ fun CommunityDetailScreen(
                             }
                         }
                         1 -> {
-                            item {
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(32.dp),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Text("Sin actividades todavía", style = MaterialTheme.typography.bodyMedium, color = KddTextSecondary)
+                            if (planesComunidad.isEmpty()) {
+                                item {
+                                    Box(
+                                        modifier = Modifier.fillMaxWidth().padding(32.dp),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text("Sin actividades todavía", style = MaterialTheme.typography.bodyMedium, color = KddTextSecondary)
+                                    }
+                                }
+                            } else {
+                                items(planesComunidad) { plan ->
+                                    PlanCard(
+                                        data = PlanCardData(
+                                            id = plan.id,
+                                            titulo = plan.titulo,
+                                            categoria = plan.categoria ?: "",
+                                            descripcion = plan.descripcion ?: "",
+                                            dia = plan.fechaEvento ?: "Sin fecha",
+                                            hora = plan.horaEvento ?: "",
+                                            distanciaKm = "",
+                                            ubicacion = plan.ubicacionTexto,
+                                            anfitrionNombre = plan.anfitrionNombre ?: ""
+                                        ),
+                                        onClick = { onNavigateToPlan(plan.id) }
+                                    )
                                 }
                             }
                         }
@@ -292,6 +356,27 @@ fun CommunityDetailScreen(
                 }
             }
         }
+    }
+
+    if (mostrarConfirmAbandonar) {
+        AlertDialog(
+            onDismissRequest = { mostrarConfirmAbandonar = false },
+            title = { Text("Abandonar comunidad") },
+            text = { Text("¿Seguro que quieres abandonar esta comunidad?") },
+            confirmButton = {
+                TextButton(onClick = {
+                    mostrarConfirmAbandonar = false
+                    viewModel.abandonarComunidad(
+                        id = communityId,
+                        onSuccess = { viewModel.cargarDetalle(communityId) },
+                        onError = { msg -> errorMsg = msg }
+                    )
+                }) { Text("Abandonar", color = Color(0xFFE53935)) }
+            },
+            dismissButton = {
+                TextButton(onClick = { mostrarConfirmAbandonar = false }) { Text("Cancelar") }
+            }
+        )
     }
 }
 
@@ -362,21 +447,51 @@ private fun MemberCard(
             }
         }
         if (!esSoyYo) {
-            IconButton(
-                onClick = {
-                    if (!solicitudEnviada) {
-                        solicitudEnviada = true
-                        onAnadirAmigo(miembro.id)
-                    }
-                },
-                modifier = Modifier.size(36.dp)
-            ) {
-                Icon(
-                    imageVector = if (solicitudEnviada) Icons.Filled.Check else Icons.Filled.PersonAdd,
-                    contentDescription = if (solicitudEnviada) "Solicitud enviada" else "Añadir amigo",
-                    tint = if (solicitudEnviada) KddTextHint else KddPurple,
-                    modifier = Modifier.size(20.dp)
-                )
+            var menuExpandido by remember { mutableStateOf(false) }
+            Box {
+                IconButton(
+                    onClick = { menuExpandido = true },
+                    modifier = Modifier.size(36.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.MoreVert,
+                        contentDescription = "Opciones",
+                        tint = KddTextSecondary,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+                DropdownMenu(
+                    expanded = menuExpandido,
+                    onDismissRequest = { menuExpandido = false }
+                ) {
+                    DropdownMenuItem(
+                        text = {
+                            Text(if (solicitudEnviada) "Solicitud enviada" else "Agregar amigo")
+                        },
+                        onClick = {
+                            if (!solicitudEnviada) {
+                                solicitudEnviada = true
+                                onAnadirAmigo(miembro.id)
+                            }
+                            menuExpandido = false
+                        },
+                        leadingIcon = {
+                            Icon(
+                                if (solicitudEnviada) Icons.Filled.Check else Icons.Filled.PersonAdd,
+                                contentDescription = null,
+                                tint = if (solicitudEnviada) KddTextHint else KddPurple
+                            )
+                        },
+                        enabled = !solicitudEnviada
+                    )
+                    DropdownMenuItem(
+                        text = { Text("Bloquear") },
+                        onClick = { menuExpandido = false },
+                        leadingIcon = {
+                            Icon(Icons.Filled.Block, contentDescription = null, tint = KddTextSecondary)
+                        }
+                    )
+                }
             }
         }
     }

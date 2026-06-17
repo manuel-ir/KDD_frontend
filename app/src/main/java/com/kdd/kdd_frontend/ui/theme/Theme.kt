@@ -20,6 +20,13 @@ private val KddColorScheme = lightColorScheme(
     error = KddError
 )
 
+/**
+ * Tema visual de la aplicacion.
+ *
+ * Aplica los colores, tipografia y formas definidos a todos los
+ * componentes de Jetpack Compose de la app. Soporta modo claro
+ * y oscuro (aunque la app usa principalmente modo claro).
+ */
 @Composable
 fun KDDTheme(content: @Composable () -> Unit) {
     MaterialTheme(

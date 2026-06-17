@@ -6,6 +6,16 @@ import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import java.util.concurrent.TimeUnit
 
+/**
+ * Configuracion del cliente HTTP para comunicarse con el backend.
+ *
+ * Usa Retrofit2 con OkHttp para hacer las peticiones REST.
+ * El interceptor de autenticacion anade automaticamente el token JWT
+ * en la cabecera Authorization de cada peticion que lo requiere.
+ *
+ * La URL base apunta al emulador de Android (10.0.2.2 equivale a localhost
+ * en el ordenador desde el emulador).
+ */
 object ApiClient {
 
     // En el emulador Android, 10.0.2.2 apunta al localhost de tu PC

@@ -15,12 +15,21 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.activity.ComponentActivity
+import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.kdd.kdd_frontend.ui.components.*
 import com.kdd.kdd_frontend.ui.theme.*
 import com.kdd.kdd_frontend.viewmodel.ComunidadViewModel
 import com.kdd.kdd_frontend.viewmodel.ComunidadesState
 
+/**
+ * Pantalla con la lista de comunidades disponibles.
+ *
+ * Muestra todas las comunidades y permite buscar por nombre.
+ * Al pulsar una comunidad navega a su detalle.
+ * Incluye un boton para crear una nueva comunidad.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CommunitiesScreen(
@@ -32,11 +41,23 @@ fun CommunitiesScreen(
     onNavigateToCreatePlan: () -> Unit,
     onNavigateToCreateCommunity: () -> Unit
 ) {
-    val viewModel: ComunidadViewModel = viewModel()
+    val viewModel: ComunidadViewModel = viewModel(LocalContext.current as ComponentActivity)
     val comunidadesState by viewModel.comunidadesState.collectAsState()
+    val misComunidadesState by viewModel.misComunidades.collectAsState()
+
+    // Recargar al entrar en la pantalla para garantizar datos actualizados
+    LaunchedEffect(Unit) {
+        viewModel.cargarComunidades()
+    }
 
     var selectedTab by remember { mutableIntStateOf(0) }
-    var filtroActivo by remember { mutableStateOf<String?>(null) }
+    val filtroComCiudad by viewModel.filtroComCiudad.collectAsState()
+    val filtroComCategoria by viewModel.filtroComCategoria.collectAsState()
+    val filtroActivo: String? = when {
+        filtroComCategoria.isNotBlank() -> filtroComCategoria
+        filtroComCiudad.isNotBlank() -> filtroComCiudad
+        else -> null
+    }
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     var showBottomSheet by remember { mutableStateOf(false) }
     val tabs = listOf("Descubrir", "Tú")
@@ -119,7 +140,7 @@ fun CommunitiesScreen(
                 if (filtroActivo != null) {
                     InputChip(
                         selected = true,
-                        onClick = { filtroActivo = null },
+                        onClick = { viewModel.limpiarFiltrosComunidades() },
                         label = { Text(filtroActivo!!) },
                         trailingIcon = {
                             Icon(Icons.Filled.Close, contentDescription = "Quitar filtro", modifier = Modifier.size(14.dp))
@@ -132,14 +153,40 @@ fun CommunitiesScreen(
                 }
             }
 
+            LaunchedEffect(selectedTab) {
+                if (selectedTab == 1) viewModel.cargarMisComunidades()
+            }
+
             if (selectedTab == 1) {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text("Aún no perteneces a ninguna comunidad", style = MaterialTheme.typography.bodyMedium, color = KddTextSecondary)
-                        Text("Explora y únete a una", style = MaterialTheme.typography.bodySmall, color = KddTextHint)
+                when (val estado = misComunidadesState) {
+                    is ComunidadesState.Loading -> {
+                        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                            CircularProgressIndicator(color = KddPurple)
+                        }
+                    }
+                    is ComunidadesState.Error -> {
+                        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                            Text(estado.mensaje, style = MaterialTheme.typography.bodyMedium, color = KddTextSecondary)
+                        }
+                    }
+                    is ComunidadesState.Success -> {
+                        if (estado.comunidades.isEmpty()) {
+                            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    Text("Aún no perteneces a ninguna comunidad", style = MaterialTheme.typography.bodyMedium, color = KddTextSecondary)
+                                    Text("Explora y únete a una", style = MaterialTheme.typography.bodySmall, color = KddTextHint)
+                                }
+                            }
+                        } else {
+                            LazyColumn {
+                                items(estado.comunidades) { comunidad ->
+                                    CommunityCard(
+                                        data = comunidad,
+                                        onClick = { onNavigateToCommunityDetail(comunidad.id) }
+                                    )
+                                }
+                            }
+                        }
                     }
                 }
             } else {

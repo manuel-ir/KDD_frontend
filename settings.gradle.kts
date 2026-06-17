@@ -22,5 +22,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "kdd_frontend_nuevo"
+rootProject.name = "kdd_frontend"
 include(":app")

@@ -14,12 +14,24 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.activity.ComponentActivity
+import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.kdd.kdd_frontend.ui.components.*
 import com.kdd.kdd_frontend.ui.theme.*
 import com.kdd.kdd_frontend.viewmodel.PlanViewModel
 import com.kdd.kdd_frontend.viewmodel.PlanesState
 
+/**
+ * Pantalla de exploracion de planes en formato lista.
+ *
+ * Muestra todos los planes disponibles ordenados por fecha.
+ * Permite aplicar filtros por categoria, idioma, edad, aforo y horario.
+ * Al pulsar una tarjeta navega al detalle del plan.
+ *
+ * Si no hay conexion con el servidor muestra un mensaje de error
+ * con un boton para reintentar la carga.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ExploreScreen(
@@ -32,11 +44,24 @@ fun ExploreScreen(
     onNavigateToCreatePlan: () -> Unit,
     onNavigateToCreateCommunity: () -> Unit
 ) {
-    var filtroActivo by remember { mutableStateOf<String?>(null) }
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     var showBottomSheet by remember { mutableStateOf(false) }
-    val planViewModel: PlanViewModel = viewModel()
+    val planViewModel: PlanViewModel = viewModel(LocalContext.current as ComponentActivity)
     val planesState by planViewModel.planesState.collectAsState()
+    val filtroCategoria by planViewModel.filtroCategoria.collectAsState()
+    val filtroFecha by planViewModel.filtroFecha.collectAsState()
+
+    // Recargar al entrar en la pantalla para garantizar datos actualizados
+    LaunchedEffect(Unit) {
+        planViewModel.cargarPlanes()
+    }
+
+    val filtroActivo: String? = when {
+        filtroCategoria.isNotBlank() && filtroFecha != null -> "$filtroCategoria · $filtroFecha"
+        filtroCategoria.isNotBlank() -> filtroCategoria
+        filtroFecha != null -> filtroFecha
+        else -> null
+    }
 
     Scaffold(
         bottomBar = {
@@ -87,7 +112,7 @@ fun ExploreScreen(
                 if (filtroActivo != null) {
                     InputChip(
                         selected = true,
-                        onClick = { filtroActivo = null },
+                        onClick = { planViewModel.limpiarFiltrosExplora() },
                         label = { Text(filtroActivo!!) },
                         trailingIcon = {
                             Icon(Icons.Filled.Close, contentDescription = "Quitar filtro", modifier = Modifier.size(14.dp))

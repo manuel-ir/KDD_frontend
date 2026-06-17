@@ -7,6 +7,7 @@ import android.graphics.Canvas
 import android.graphics.Paint
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
@@ -22,9 +23,12 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
+import com.kdd.kdd_frontend.R
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.google.android.gms.location.LocationServices
@@ -43,6 +47,10 @@ import com.kdd.kdd_frontend.viewmodel.PerfilViewModel
 import com.kdd.kdd_frontend.viewmodel.PlanViewModel
 import com.kdd.kdd_frontend.viewmodel.PlanesState
 import kotlinx.coroutines.launch
+import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneOffset
+import java.time.format.DateTimeFormatter
 
 private val EMOJI_CATEGORIA = mapOf(
     "Deportes" to "🏃",
@@ -61,6 +69,16 @@ private val EMOJI_CATEGORIA = mapOf(
     "Voluntariado" to "🤝"
 )
 
+/**
+ * Pantalla principal con el mapa de Google Maps.
+ *
+ * Muestra los planes disponibles como marcadores en el mapa.
+ * Al pulsar un marcador se puede ver el detalle del plan.
+ * Incluye un banner de error si el servidor no esta disponible.
+ *
+ * Usa Google Maps SDK para Android con Jetpack Compose.
+ * Las coordenadas de cada plan se obtienen del backend.
+ */
 private fun emojiABitmapDescriptor(emoji: String, sizePx: Int = 96): BitmapDescriptor {
     val bitmap = Bitmap.createBitmap(sizePx, sizePx, Bitmap.Config.ARGB_8888)
     val canvas = Canvas(bitmap)
@@ -111,6 +129,75 @@ fun MainScreen(
     val fotoPerfil = (perfilState as? PerfilState.Success)?.usuario?.fotoPerfil
     val inicialesNombre = (perfilState as? PerfilState.Success)?.usuario?.nombreMostrado?.firstOrNull()?.uppercaseChar()?.toString() ?: "P"
 
+    // Popups obligatorios: alias → edad (en ese orden)
+    val usuario = (perfilState as? PerfilState.Success)?.usuario
+    var mostrarDialogoAlias by remember { mutableStateOf(false) }
+    var guardandoAlias by remember { mutableStateOf(false) }
+    var errorAlias by remember { mutableStateOf<String?>(null) }
+    var mostrarDialogoEdad by remember { mutableStateOf(false) }
+    var guardandoEdad by remember { mutableStateOf(false) }
+    var errorEdad by remember { mutableStateOf<String?>(null) }
+
+    LaunchedEffect(usuario) {
+        if (usuario != null) {
+            if (usuario.nombreUsuario.isNullOrBlank()) {
+                mostrarDialogoAlias = true
+            } else if (usuario.fechaNacimiento.isNullOrBlank()) {
+                mostrarDialogoEdad = true
+            }
+        }
+    }
+
+    if (mostrarDialogoAlias) {
+        AliasObligatorioDialog(
+            guardando = guardandoAlias,
+            error = errorAlias,
+            onConfirmar = { alias ->
+                guardandoAlias = true
+                errorAlias = null
+                perfilViewModel.editarPerfil(
+                    nombre = usuario?.nombre ?: "",
+                    nombreUsuario = alias,
+                    descripcion = usuario?.descripcion ?: "",
+                    fechaNacimiento = null,
+                    onSuccess = {
+                        guardandoAlias = false
+                        mostrarDialogoAlias = false
+                    },
+                    onError = { msg ->
+                        guardandoAlias = false
+                        errorAlias = msg
+                    }
+                )
+            }
+        )
+    }
+
+    if (mostrarDialogoEdad) {
+        EdadObligatoriaDialog(
+            guardando = guardandoEdad,
+            error = errorEdad,
+            onConfirmar = { fechaIso ->
+                guardandoEdad = true
+                errorEdad = null
+                perfilViewModel.editarPerfil(
+                    nombre = usuario?.nombre ?: "",
+                    nombreUsuario = usuario?.nombreUsuario,
+                    descripcion = usuario?.descripcion ?: "",
+                    fechaNacimiento = fechaIso,
+                    onSuccess = {
+                        guardandoEdad = false
+                        mostrarDialogoEdad = false
+                    },
+                    onError = { msg ->
+                        guardandoEdad = false
+                        errorEdad = msg
+                    }
+                )
+            }
+        )
+    }
+
     Box(modifier = Modifier.fillMaxSize()) {
         Column(modifier = Modifier.fillMaxSize()) {
             KddTopAppBar(
@@ -119,6 +206,20 @@ fun MainScreen(
                 onChatsClick = onNavigateToChats,
                 onAccountClick = onNavigateToAccount
             )
+
+            if (planesState is PlanesState.Error) {
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    color = MaterialTheme.colorScheme.errorContainer
+                ) {
+                    Text(
+                        text = "Sin conexion con el servidor. Comprueba tu red.",
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onErrorContainer
+                    )
+                }
+            }
 
             Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
                 GoogleMap(
@@ -139,7 +240,6 @@ fun MainScreen(
                                 val icon = if (emoji != null) {
                                     remember(plan.categoria) { emojiABitmapDescriptor(emoji) }
                                 } else null
-
                                 Marker(
                                     state = rememberMarkerState(position = LatLng(lat, lng)),
                                     title = plan.titulo,
@@ -224,6 +324,156 @@ private fun centrarEnUbicacion(
 }
 
 @Composable
+private fun AliasObligatorioDialog(
+    guardando: Boolean,
+    error: String?,
+    onConfirmar: (String) -> Unit
+) {
+    var alias by remember { mutableStateOf("") }
+    androidx.compose.ui.window.Dialog(
+        onDismissRequest = { /* no se puede cerrar */ },
+        properties = androidx.compose.ui.window.DialogProperties(
+            dismissOnBackPress = false,
+            dismissOnClickOutside = false
+        )
+    ) {
+        androidx.compose.material3.Card(
+            shape = androidx.compose.foundation.shape.RoundedCornerShape(20.dp),
+            colors = androidx.compose.material3.CardDefaults.cardColors(containerColor = Color.White)
+        ) {
+            Column(
+                modifier = Modifier.padding(24.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                Text(
+                    "¿Cómo quieres que te llamen?",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = KddTextPrimary
+                )
+                Text(
+                    "Elige un alias para identificarte en los planes. Podrás cambiarlo hasta 3 veces.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = KddTextSecondary
+                )
+                OutlinedTextField(
+                    value = alias,
+                    onValueChange = { if (it.length <= 20) alias = it },
+                    placeholder = { Text("Ej: pepegrillo92", color = KddTextHint) },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = androidx.compose.foundation.shape.RoundedCornerShape(10.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = KddPurple,
+                        unfocusedBorderColor = KddDivider
+                    )
+                )
+                if (error != null) {
+                    Text(
+                        text = error,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error
+                    )
+                }
+                Button(
+                    onClick = { if (alias.isNotBlank()) onConfirmar(alias.trim()) },
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = alias.isNotBlank() && !guardando,
+                    colors = ButtonDefaults.buttonColors(containerColor = KddPurple)
+                ) {
+                    if (guardando) {
+                        CircularProgressIndicator(color = Color.White, modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+                    } else {
+                        Text("Confirmar alias", color = Color.White, fontWeight = FontWeight.SemiBold)
+                    }
+                }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun EdadObligatoriaDialog(
+    guardando: Boolean,
+    error: String?,
+    onConfirmar: (String) -> Unit
+) {
+    val haceAños18 = LocalDate.now().minusYears(18)
+    val millis18 = haceAños18.atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli()
+    val datePickerState = rememberDatePickerState(
+        initialSelectedDateMillis = millis18,
+        yearRange = 1920..LocalDate.now().minusYears(13).year
+    )
+    var mostrarConfirmacion by remember { mutableStateOf(false) }
+    var fechaPendiente by remember { mutableStateOf<String?>(null) }
+    val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd")
+    val fechaSeleccionada: String? = datePickerState.selectedDateMillis?.let { millis ->
+        Instant.ofEpochMilli(millis).atZone(ZoneOffset.UTC).toLocalDate().format(formatter)
+    }
+    val fechaLegible: String? = datePickerState.selectedDateMillis?.let { millis ->
+        Instant.ofEpochMilli(millis).atZone(ZoneOffset.UTC).toLocalDate()
+            .format(DateTimeFormatter.ofPattern("dd/MM/yyyy"))
+    }
+    if (mostrarConfirmacion && fechaPendiente != null) {
+        AlertDialog(
+            onDismissRequest = { mostrarConfirmacion = false },
+            title = { Text("¿Seguro que es correcta?") },
+            text = { Text("Has seleccionado $fechaLegible.\n\nEsta fecha no podrá cambiarse después.") },
+            confirmButton = {
+                Button(
+                    onClick = { mostrarConfirmacion = false; onConfirmar(fechaPendiente!!) },
+                    colors = ButtonDefaults.buttonColors(containerColor = KddPurple),
+                    enabled = !guardando
+                ) {
+                    if (guardando) {
+                        CircularProgressIndicator(color = Color.White, modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                    } else {
+                        Text("Sí, es correcta")
+                    }
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { mostrarConfirmacion = false }) { Text("Volver") }
+            }
+        )
+    }
+    DatePickerDialog(
+        onDismissRequest = { /* No se puede cerrar */ },
+        properties = DialogProperties(dismissOnBackPress = false, dismissOnClickOutside = false),
+        confirmButton = {
+            Button(
+                onClick = {
+                    if (fechaSeleccionada != null) {
+                        fechaPendiente = fechaSeleccionada
+                        mostrarConfirmacion = true
+                    }
+                },
+                enabled = fechaSeleccionada != null && !guardando,
+                colors = ButtonDefaults.buttonColors(containerColor = KddPurple)
+            ) {
+                Text(if (fechaLegible != null) "Confirmar ($fechaLegible)" else "Confirmar")
+            }
+        }
+    ) {
+        DatePicker(
+            state = datePickerState,
+            showModeToggle = true,
+            title = {
+                Column(modifier = Modifier.padding(start = 24.dp, end = 24.dp, top = 16.dp)) {
+                    Text("¿Cuándo naciste?", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    Text("Necesario para los límites de edad en los planes.", style = MaterialTheme.typography.bodySmall, color = KddTextSecondary)
+                    if (error != null) {
+                        Spacer(Modifier.height(4.dp))
+                        Text(text = error, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+                    }
+                }
+            }
+        )
+    }
+}
+
+@Composable
 private fun KddTopAppBar(
     fotoPerfil: String?,
     iniciales: String,
@@ -243,20 +493,11 @@ private fun KddTopAppBar(
                 .padding(horizontal = 16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Surface(
-                modifier = Modifier.size(32.dp),
-                shape = RoundedCornerShape(8.dp),
-                color = KddPurple
-            ) {
-                Box(contentAlignment = Alignment.Center) {
-                    Text(
-                        text = "K",
-                        fontWeight = FontWeight.ExtraBold,
-                        color = Color.White,
-                        fontSize = 16.sp
-                    )
-                }
-            }
+            Image(
+                painter = painterResource(id = R.drawable.logo_kdd),
+                contentDescription = "Logo KDD",
+                modifier = Modifier.size(32.dp)
+            )
             Spacer(modifier = Modifier.width(8.dp))
             Text(
                 text = "KDD",
@@ -264,24 +505,12 @@ private fun KddTopAppBar(
                 fontWeight = FontWeight.Bold,
                 color = KddTextPrimary
             )
-
             Spacer(modifier = Modifier.weight(1f))
-
             IconButton(onClick = onChatsClick) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Outlined.Chat,
-                    contentDescription = "Chats",
-                    tint = KddTextPrimary
-                )
+                Icon(imageVector = Icons.AutoMirrored.Outlined.Chat, contentDescription = "Chats", tint = KddTextPrimary)
             }
-
             IconButton(onClick = onAccountClick) {
-                Box(
-                    modifier = Modifier
-                        .size(32.dp)
-                        .clip(CircleShape),
-                    contentAlignment = Alignment.Center
-                ) {
+                Box(modifier = Modifier.size(32.dp).clip(CircleShape), contentAlignment = Alignment.Center) {
                     if (!fotoPerfil.isNullOrBlank()) {
                         AsyncImage(
                             model = fotoPerfil,

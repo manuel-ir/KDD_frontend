@@ -6,6 +6,10 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 
+/**
+ * Configuracion de tipografia de la aplicacion.
+ * Define los estilos de texto (tamano, peso, espaciado) usados en toda la app.
+ */
 val Typography = Typography(
     headlineLarge = TextStyle(
         fontFamily = FontFamily.Default,
