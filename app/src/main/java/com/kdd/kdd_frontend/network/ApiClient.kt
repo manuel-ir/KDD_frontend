@@ -18,9 +18,8 @@ import java.util.concurrent.TimeUnit
  */
 object ApiClient {
 
-    // En el emulador Android, 10.0.2.2 apunta al localhost de tu PC
-    // Si pruebas en un dispositivo físico, pon la IP de tu PC en la red WiFi
-    private const val BASE_URL = "http://10.0.2.2:8080/"
+    // Backend desplegado en Render
+    private const val BASE_URL = "https://kdd-backend.onrender.com/"
 
     // Token JWT guardado en memoria (se actualiza al hacer login)
     var jwtToken: String? = null
