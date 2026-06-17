@@ -189,7 +189,8 @@ fun PlanDetailScreen(
                                             viewModel.marcarPresente(
                                                 planId = planId,
                                                 usuarioId = miId,
-                                                onSuccess = { viewModel.cargarParticipantes(planId) }
+                                                onSuccess = { viewModel.cargarParticipantes(planId) },
+                                                onError = { msg -> errorMsg = msg }
                                             )
                                         },
                                         modifier = Modifier.weight(1f).height(48.dp),

@@ -73,6 +73,12 @@ class PlanViewModel(application: Application) : AndroidViewModel(application) {
     private val _misPlanes = MutableStateFlow<PlanesState>(PlanesState.Loading)
     val misPlanes: StateFlow<PlanesState> = _misPlanes
 
+    private val _misPlanesCreados = MutableStateFlow<PlanesState>(PlanesState.Loading)
+    val misPlanesCreados: StateFlow<PlanesState> = _misPlanesCreados
+
+    private val _historial = MutableStateFlow<PlanesState>(PlanesState.Loading)
+    val historial: StateFlow<PlanesState> = _historial
+
     private val _participando = MutableStateFlow(false)
     val participando: StateFlow<Boolean> = _participando
 
@@ -142,6 +148,40 @@ class PlanViewModel(application: Application) : AndroidViewModel(application) {
                 }
             } catch (e: Exception) {
                 _misPlanes.value = PlanesState.Error("No se pudo conectar con el servidor")
+            }
+        }
+    }
+
+    fun cargarHistorial() {
+        viewModelScope.launch {
+            _historial.value = PlanesState.Loading
+            try {
+                val response = ApiClient.api.getHistorial()
+                if (response.isSuccessful) {
+                    val planes = response.body()?.map { it.toPlanCardData() } ?: emptyList()
+                    _historial.value = PlanesState.Success(planes)
+                } else {
+                    _historial.value = PlanesState.Error("Error ${response.code()}")
+                }
+            } catch (e: Exception) {
+                _historial.value = PlanesState.Error("No se pudo conectar con el servidor")
+            }
+        }
+    }
+
+    fun cargarMisPlanesCreados() {
+        viewModelScope.launch {
+            _misPlanesCreados.value = PlanesState.Loading
+            try {
+                val response = ApiClient.api.getMisPlanesCreados()
+                if (response.isSuccessful) {
+                    val planes = response.body()?.map { it.toPlanCardData() } ?: emptyList()
+                    _misPlanesCreados.value = PlanesState.Success(planes)
+                } else {
+                    _misPlanesCreados.value = PlanesState.Error("Error ${response.code()}")
+                }
+            } catch (e: Exception) {
+                _misPlanesCreados.value = PlanesState.Error("No se pudo conectar con el servidor")
             }
         }
     }
@@ -218,7 +258,9 @@ class PlanViewModel(application: Application) : AndroidViewModel(application) {
                     cargarPlanes()
                     onSuccess(planId)
                 } else {
-                    onError("Error al crear el plan (${response.code()})")
+                    val errorBody = response.errorBody()?.string() ?: ""
+                    val msg = extractMessage(errorBody).ifBlank { "Error al crear el plan (${response.code()})" }
+                    onError(msg)
                 }
             } catch (e: Exception) {
                 onError("No se pudo conectar con el servidor")
@@ -325,15 +367,20 @@ class PlanViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun marcarPresente(planId: Long, usuarioId: Long, onSuccess: () -> Unit) {
+    fun marcarPresente(planId: Long, usuarioId: Long, onSuccess: () -> Unit, onError: (String) -> Unit = {}) {
         viewModelScope.launch {
             try {
                 val response = ApiClient.api.marcarPresente(planId, usuarioId)
                 if (response.isSuccessful) {
                     cargarParticipantes(planId)
                     onSuccess()
+                } else {
+                    val errorBody = response.errorBody()?.string() ?: ""
+                    onError(extractMessage(errorBody).ifBlank { "No se pudo confirmar la asistencia (${response.code()})" })
                 }
-            } catch (e: Exception) { /* silencioso */ }
+            } catch (e: Exception) {
+                onError("Error de conexión")
+            }
         }
     }
 

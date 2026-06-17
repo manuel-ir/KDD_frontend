@@ -50,7 +50,8 @@ data class PlanCardData(
 fun PlanCard(
     data: PlanCardData,
     onClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    imagenOverlay: (@Composable BoxScope.() -> Unit)? = null
 ) {
     Card(
         onClick = onClick,
@@ -82,6 +83,9 @@ fun PlanCard(
                             .background(KddSurfaceVariant)
                     )
                 }
+
+                // Contenido opcional superpuesto en la imagen (ej: boton eliminar historial)
+                imagenOverlay?.invoke(this)
 
                 // Título y categoría sobre la imagen
                 Column(

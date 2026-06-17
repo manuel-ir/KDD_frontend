@@ -45,6 +45,10 @@ interface ApiService {
     suspend fun getPlanes(): Response<List<PlanDto>>
     @GET("api/planes/mis-planes")
     suspend fun getMisPlanes(): Response<List<PlanDto>>
+    @GET("api/planes/mis-planes-creados")
+    suspend fun getMisPlanesCreados(): Response<List<PlanDto>>
+    @GET("api/planes/historial")
+    suspend fun getHistorial(): Response<List<PlanDto>>
     @GET("api/planes/{id}")
     suspend fun getPlan(@Path("id") id: Long): Response<PlanDto>
     @POST("api/planes")

@@ -403,9 +403,9 @@ fun CreatePlanScreen(
                                     comunidadId = if (communityId > 0) communityId else null
                                 ),
                                 onSuccess = { planId -> onPlanCreated(planId) },
-                                onError = {
+                                onError = { msg ->
                                     cargando = false
-                                    errorMsg = "Error al crear el plan. Comprueba los datos."
+                                    errorMsg = msg
                                 }
                             )
                         }
