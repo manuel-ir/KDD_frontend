@@ -1,0 +1,23 @@
+*.iml
+.gradle
+/local.properties
+local.properties
+.DS_Store
+/build
+/captures
+.externalNativeBuild
+.cxx
+
+# IDE - Android Studio / IntelliJ
+.idea/
+
+# Credenciales y claves sensibles
+app/google-services.json
+
+# Scripts de configuracion auxiliares
+setup_git_branches.sh
+
+# Archivos con nombre incorrecto generados por error
+de planes con el backend
+trador junto al de anadir actividad
+trador junto al de añadir actividad
