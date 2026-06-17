@@ -107,7 +107,6 @@ fun CreatePlanScreen(
     var edadMin by remember { mutableFloatStateOf(18f) }
     var edadMax by remember { mutableFloatStateOf(55f) }
 
-    // Interaction sources para detectar arrastre de sliders y deshabilitar scroll del padre
     val isAcompanado = remember { MutableInteractionSource() }
     val isMaxAcompanantes = remember { MutableInteractionSource() }
     val isEdadStart = remember { MutableInteractionSource() }
@@ -118,14 +117,12 @@ fun CreatePlanScreen(
     val isDraggingEdadEnd by isEdadEnd.collectIsDraggedAsState()
     val anySliderDragging = isDraggingAcompanado || isDraggingMaxAcompanantes || isDraggingEdadStart || isDraggingEdadEnd
 
-    // Fechas y horas
     var fechaDesde by remember { mutableStateOf<LocalDate?>(null) }
     var horaDesde by remember { mutableStateOf<LocalTime?>(null) }
     var hastaHabilitado by remember { mutableStateOf(false) }
     var fechaHasta by remember { mutableStateOf<LocalDate?>(null) }
     var horaHasta by remember { mutableStateOf<LocalTime?>(null) }
 
-    // Dialogs de fecha/hora
     var showDateDesdeDialog by remember { mutableStateOf(false) }
     var showTimeDesdeDialog by remember { mutableStateOf(false) }
     var showDateHastaDialog by remember { mutableStateOf(false) }
@@ -163,7 +160,6 @@ fun CreatePlanScreen(
 
     Scaffold(snackbarHost = { SnackbarHost(snackbarHostState) }) { innerPadding ->
     Column(modifier = Modifier.fillMaxSize().background(Color.White).padding(innerPadding)) {
-        // Barra superior
         Row(
             modifier = Modifier.fillMaxWidth().statusBarsPadding().padding(horizontal = 8.dp, vertical = 4.dp),
             verticalAlignment = Alignment.CenterVertically
@@ -182,7 +178,6 @@ fun CreatePlanScreen(
         ) {
             FormField(label = "Título", maxChars = 25, value = titulo, onValueChange = { if (it.length <= 25) titulo = it }, placeholder = "¿Cómo se llama tu actividad?")
 
-            // Selector de categoría
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text("Categoría", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, color = KddTextPrimary)
                 OutlinedButton(
@@ -194,10 +189,7 @@ fun CreatePlanScreen(
                 ) {
                     Icon(Icons.Filled.Category, contentDescription = null, modifier = Modifier.size(16.dp))
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        if (categoria.isBlank()) "Selecciona una categoría" else categoria,
-                        modifier = Modifier.weight(1f)
-                    )
+                    Text(if (categoria.isBlank()) "Selecciona una categoría" else categoria, modifier = Modifier.weight(1f))
                     Icon(Icons.Filled.KeyboardArrowDown, contentDescription = null, modifier = Modifier.size(16.dp))
                 }
                 if (categoria == "Personalizada") {
@@ -216,10 +208,8 @@ fun CreatePlanScreen(
 
             FormField(label = "Descripción", maxChars = 300, value = descripcion, onValueChange = { if (it.length <= 300) descripcion = it }, placeholder = "Describe a qué invitas a los amigos", singleLine = false, minLines = 3)
 
-            // ¿Cuándo?
             Text("¿Cuándo?", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = KddTextPrimary)
 
-            // Desde
             Column {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text("Desde", style = MaterialTheme.typography.bodySmall, color = KddTextSecondary)
@@ -230,9 +220,7 @@ fun CreatePlanScreen(
                     Button(
                         onClick = { showDateDesdeDialog = true },
                         modifier = Modifier.weight(1f),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = if (fechaDesde != null) KddPurple else KddPurpleLight
-                        ),
+                        colors = ButtonDefaults.buttonColors(containerColor = if (fechaDesde != null) KddPurple else KddPurpleLight),
                         shape = RoundedCornerShape(8.dp)
                     ) {
                         Icon(Icons.Filled.CalendarToday, contentDescription = null, modifier = Modifier.size(14.dp))
@@ -242,9 +230,7 @@ fun CreatePlanScreen(
                     Button(
                         onClick = { showTimeDesdeDialog = true },
                         modifier = Modifier.weight(1f),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = if (horaDesde != null) KddPurple else KddPurpleLight
-                        ),
+                        colors = ButtonDefaults.buttonColors(containerColor = if (horaDesde != null) KddPurple else KddPurpleLight),
                         shape = RoundedCornerShape(8.dp)
                     ) {
                         Icon(Icons.Filled.Schedule, contentDescription = null, modifier = Modifier.size(14.dp))
@@ -254,8 +240,7 @@ fun CreatePlanScreen(
                 }
                 if (fechaDesde == null || horaDesde == null) {
                     Text(
-                        if (fechaDesde == null) "La fecha y hora de inicio son obligatorias"
-                        else "La hora de inicio es obligatoria",
+                        if (fechaDesde == null) "La fecha y hora de inicio son obligatorias" else "La hora de inicio es obligatoria",
                         style = MaterialTheme.typography.labelSmall,
                         color = Color.Red,
                         modifier = Modifier.padding(top = 4.dp)
@@ -263,22 +248,14 @@ fun CreatePlanScreen(
                 }
             }
 
-            // Hasta (con checkbox)
             Column {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Checkbox(
-                        checked = hastaHabilitado,
-                        onCheckedChange = { hastaHabilitado = it },
-                        colors = CheckboxDefaults.colors(checkedColor = KddPurple)
-                    )
+                    Checkbox(checked = hastaHabilitado, onCheckedChange = { hastaHabilitado = it }, colors = CheckboxDefaults.colors(checkedColor = KddPurple))
                     Spacer(modifier = Modifier.width(4.dp))
                     Text("Hasta (opcional)", style = MaterialTheme.typography.bodyMedium, color = KddTextSecondary)
                 }
                 Spacer(modifier = Modifier.height(6.dp))
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    modifier = Modifier.alpha(if (hastaHabilitado) 1f else 0.35f)
-                ) {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.alpha(if (hastaHabilitado) 1f else 0.35f)) {
                     Button(
                         onClick = { if (hastaHabilitado) showDateHastaDialog = true },
                         modifier = Modifier.weight(1f),
@@ -302,7 +279,6 @@ fun CreatePlanScreen(
                 }
             }
 
-            // ¿Dónde?
             Text("¿Dónde?", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = KddTextPrimary)
             Button(
                 onClick = { showLocationPicker = true },
@@ -318,25 +294,15 @@ fun CreatePlanScreen(
                 )
             }
 
-            // Foto
             Text("Personalizar", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = KddTextPrimary)
             Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(140.dp)
-                    .clip(RoundedCornerShape(12.dp))
+                modifier = Modifier.fillMaxWidth().height(140.dp).clip(RoundedCornerShape(12.dp))
                     .border(1.dp, KddPurple.copy(alpha = 0.4f), RoundedCornerShape(12.dp))
-                    .background(Color.White)
-                    .clickable { imagePicker.launch("image/*") },
+                    .background(Color.White).clickable { imagePicker.launch("image/*") },
                 contentAlignment = Alignment.Center
             ) {
                 if (fotoPlanUri != null) {
-                    AsyncImage(
-                        model = fotoPlanUri,
-                        contentDescription = "Foto del plan",
-                        modifier = Modifier.fillMaxSize(),
-                        contentScale = ContentScale.Crop
-                    )
+                    AsyncImage(model = fotoPlanUri, contentDescription = "Foto del plan", modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
                     if (subiendoFoto) {
                         Box(modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.4f)), contentAlignment = Alignment.Center) {
                             CircularProgressIndicator(color = Color.White, strokeWidth = 3.dp)
@@ -352,26 +318,21 @@ fun CreatePlanScreen(
 
             HorizontalDivider()
 
-            // Detalles
             Text("Detalles", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold, color = KddTextPrimary)
 
             SliderField(
                 label = "¿Vas acompañado?",
                 sublabel = "${vasAcompanado.toInt()} persona${if (vasAcompanado > 1) "s" else ""} (incluyéndote, solo informativo)",
                 value = vasAcompanado, onValueChange = { vasAcompanado = it },
-                valueRange = 1f..10f, steps = 8,
-                interactionSource = isAcompanado
+                valueRange = 1f..10f, steps = 8, interactionSource = isAcompanado
             )
-
             SliderField(
                 label = "Aforo máximo (incluido tú)",
                 sublabel = if (maxAcompanantes.toInt() == 1) "Solo tú (plan privado)" else "${maxAcompanantes.toInt()} personas en total",
                 value = maxAcompanantes, onValueChange = { maxAcompanantes = it },
-                valueRange = 1f..50f,
-                interactionSource = isMaxAcompanantes
+                valueRange = 1f..50f, interactionSource = isMaxAcompanantes
             )
 
-            // Selector de idiomas
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text("Idiomas", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, color = KddTextPrimary)
                 OutlinedButton(
@@ -382,16 +343,11 @@ fun CreatePlanScreen(
                 ) {
                     Icon(Icons.Filled.Language, contentDescription = null, modifier = Modifier.size(16.dp))
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        if (idiomasSeleccionados.isEmpty()) "Selecciona idiomas"
-                        else idiomasSeleccionados.joinToString(", "),
-                        modifier = Modifier.weight(1f)
-                    )
+                    Text(if (idiomasSeleccionados.isEmpty()) "Selecciona idiomas" else idiomasSeleccionados.joinToString(", "), modifier = Modifier.weight(1f))
                     Icon(Icons.Filled.KeyboardArrowDown, contentDescription = null, modifier = Modifier.size(16.dp))
                 }
             }
 
-            // Rango de edad
             Card(colors = CardDefaults.cardColors(containerColor = KddSurface), shape = RoundedCornerShape(12.dp)) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text("Rango de edad", style = MaterialTheme.typography.titleMedium, color = KddTextSecondary)
@@ -414,13 +370,11 @@ fun CreatePlanScreen(
             Spacer(modifier = Modifier.height(8.dp))
         }
 
-        // Botón terminar
         Box(modifier = Modifier.padding(16.dp)) {
             val categoriaFinal = if (categoria == "Personalizada") categoriaPersonalizada.trim() else categoria
             val formValido = titulo.isNotBlank() && categoria.isNotBlank() &&
                     (categoria != "Personalizada" || categoriaPersonalizada.isNotBlank()) &&
-                    selectedLatLng != null &&
-                    fechaDesde != null && horaDesde != null
+                    selectedLatLng != null && fechaDesde != null && horaDesde != null
             Button(
                 onClick = {
                     if (formValido && !cargando) {
@@ -459,9 +413,7 @@ fun CreatePlanScreen(
                 },
                 modifier = Modifier.fillMaxWidth().height(52.dp),
                 shape = RoundedCornerShape(26.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = if (formValido && !cargando) KddPurple else KddDivider
-                ),
+                colors = ButtonDefaults.buttonColors(containerColor = if (formValido && !cargando) KddPurple else KddDivider),
                 enabled = formValido && !cargando
             ) {
                 if (cargando) {
@@ -472,9 +424,8 @@ fun CreatePlanScreen(
             }
         }
     }
-    } // cierre Scaffold
+    }
 
-    // ─── Date Picker: Desde ───
     if (showDateDesdeDialog) {
         val dateState = rememberDatePickerState()
         DatePickerDialog(
@@ -487,9 +438,7 @@ fun CreatePlanScreen(
                             errorMsg = "La fecha del evento debe ser posterior a hoy"
                         } else {
                             fechaDesde = seleccionada
-                            if (fechaHasta != null && fechaHasta!!.isBefore(seleccionada)) {
-                                fechaHasta = null
-                            }
+                            if (fechaHasta != null && fechaHasta!!.isBefore(seleccionada)) fechaHasta = null
                         }
                     }
                     showDateDesdeDialog = false
@@ -499,19 +448,14 @@ fun CreatePlanScreen(
         ) { DatePicker(state = dateState) }
     }
 
-    // ─── Time Picker: Desde ───
     if (showTimeDesdeDialog) {
         val timeState = rememberTimePickerState(initialHour = 12, initialMinute = 0, is24Hour = true)
-        TimePickerDialogKdd(
-            onDismiss = { showTimeDesdeDialog = false },
-            onConfirm = {
-                horaDesde = LocalTime.of(timeState.hour, timeState.minute)
-                showTimeDesdeDialog = false
-            }
-        ) { TimePicker(state = timeState) }
+        TimePickerDialogKdd(onDismiss = { showTimeDesdeDialog = false }, onConfirm = {
+            horaDesde = LocalTime.of(timeState.hour, timeState.minute)
+            showTimeDesdeDialog = false
+        }) { TimePicker(state = timeState) }
     }
 
-    // ─── Date Picker: Hasta ───
     if (showDateHastaDialog) {
         val dateState = rememberDatePickerState()
         DatePickerDialog(
@@ -521,10 +465,8 @@ fun CreatePlanScreen(
                     dateState.selectedDateMillis?.let {
                         val seleccionada = LocalDate.ofEpochDay(it / 86400000)
                         when {
-                            seleccionada.isBefore(LocalDate.now()) ->
-                                errorMsg = "La fecha de fin no puede ser anterior a hoy"
-                            fechaDesde != null && seleccionada.isBefore(fechaDesde) ->
-                                errorMsg = "La fecha de fin debe ser posterior a la fecha de inicio"
+                            seleccionada.isBefore(LocalDate.now()) -> errorMsg = "La fecha de fin no puede ser anterior a hoy"
+                            fechaDesde != null && seleccionada.isBefore(fechaDesde) -> errorMsg = "La fecha de fin debe ser posterior a la fecha de inicio"
                             else -> fechaHasta = seleccionada
                         }
                     }
@@ -535,25 +477,19 @@ fun CreatePlanScreen(
         ) { DatePicker(state = dateState) }
     }
 
-    // ─── Time Picker: Hasta ───
     if (showTimeHastaDialog) {
         val timeState = rememberTimePickerState(initialHour = 12, initialMinute = 0, is24Hour = true)
-        TimePickerDialogKdd(
-            onDismiss = { showTimeHastaDialog = false },
-            onConfirm = {
-                val candidata = LocalTime.of(timeState.hour, timeState.minute)
-                if (fechaHasta != null && fechaDesde != null && fechaHasta == fechaDesde
-                    && horaDesde != null && !candidata.isAfter(horaDesde)) {
-                    errorMsg = "La hora de fin debe ser posterior a la hora de inicio"
-                } else {
-                    horaHasta = candidata
-                }
-                showTimeHastaDialog = false
+        TimePickerDialogKdd(onDismiss = { showTimeHastaDialog = false }, onConfirm = {
+            val candidata = LocalTime.of(timeState.hour, timeState.minute)
+            if (fechaHasta != null && fechaDesde != null && fechaHasta == fechaDesde && horaDesde != null && !candidata.isAfter(horaDesde)) {
+                errorMsg = "La hora de fin debe ser posterior a la hora de inicio"
+            } else {
+                horaHasta = candidata
             }
-        ) { TimePicker(state = timeState) }
+            showTimeHastaDialog = false
+        }) { TimePicker(state = timeState) }
     }
 
-    // ─── Dialog: Categorías ───
     if (showCategoriasDialog) {
         Dialog(onDismissRequest = { showCategoriasDialog = false }) {
             Card(shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
@@ -563,25 +499,18 @@ fun CreatePlanScreen(
                     LazyColumn(modifier = Modifier.heightIn(max = 360.dp)) {
                         items(CATEGORIAS_PREDEFINIDAS) { cat ->
                             Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clickable {
-                                        categoria = cat
-                                        if (cat != "Personalizada") categoriaPersonalizada = ""
-                                        showCategoriasDialog = false
-                                    }
-                                    .padding(vertical = 10.dp, horizontal = 4.dp),
+                                modifier = Modifier.fillMaxWidth().clickable {
+                                    categoria = cat
+                                    if (cat != "Personalizada") categoriaPersonalizada = ""
+                                    showCategoriasDialog = false
+                                }.padding(vertical = 10.dp, horizontal = 4.dp),
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.SpaceBetween
                             ) {
                                 Text(cat, style = MaterialTheme.typography.bodyMedium, color = KddTextPrimary)
-                                if (categoria == cat) {
-                                    Icon(Icons.Filled.Check, contentDescription = null, tint = KddPurple, modifier = Modifier.size(18.dp))
-                                }
+                                if (categoria == cat) Icon(Icons.Filled.Check, contentDescription = null, tint = KddPurple, modifier = Modifier.size(18.dp))
                             }
-                            if (cat != CATEGORIAS_PREDEFINIDAS.last()) {
-                                HorizontalDivider(color = KddDivider)
-                            }
+                            if (cat != CATEGORIAS_PREDEFINIDAS.last()) HorizontalDivider(color = KddDivider)
                         }
                     }
                     Spacer(modifier = Modifier.height(8.dp))
@@ -593,40 +522,24 @@ fun CreatePlanScreen(
         }
     }
 
-    // ─── Location Picker ───
     if (showLocationPicker) {
         val locationPermissionGranted = remember {
-            ContextCompat.checkSelfPermission(
-                context, Manifest.permission.ACCESS_FINE_LOCATION
-            ) == PackageManager.PERMISSION_GRANTED
+            ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
         }
-        val permissionLauncher = rememberLauncherForActivityResult(
-            ActivityResultContracts.RequestPermission()
-        ) { /* el mapa se actualizará solo al recomponerse */ }
+        val permissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { }
+        LaunchedEffect(Unit) { if (!locationPermissionGranted) permissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION) }
 
-        LaunchedEffect(Unit) {
-            if (!locationPermissionGranted) {
-                permissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
-            }
-        }
-
-        var initialMapPosition by remember {
-            mutableStateOf(selectedLatLng ?: LatLng(40.4168, -3.7038))
-        }
+        var initialMapPosition by remember { mutableStateOf(selectedLatLng ?: LatLng(40.4168, -3.7038)) }
         LaunchedEffect(Unit) {
             if (selectedLatLng == null && locationPermissionGranted) {
                 try {
                     val fusedLocation = LocationServices.getFusedLocationProviderClient(context)
                     val location = fusedLocation.lastLocation.await()
-                    if (location != null) {
-                        initialMapPosition = LatLng(location.latitude, location.longitude)
-                    }
+                    if (location != null) initialMapPosition = LatLng(location.latitude, location.longitude)
                 } catch (_: Exception) { }
             }
         }
-        val pickerCamera = rememberCameraPositionState {
-            position = CameraPosition.fromLatLngZoom(initialMapPosition, 14f)
-        }
+        val pickerCamera = rememberCameraPositionState { position = CameraPosition.fromLatLngZoom(initialMapPosition, 14f) }
         var tempNombre by remember { mutableStateOf(ubicacionNombre) }
 
         LaunchedEffect(pickerCamera.isMoving) {
@@ -635,15 +548,12 @@ fun CreatePlanScreen(
                 val nombre = withContext(Dispatchers.IO) {
                     try {
                         @Suppress("DEPRECATION")
-                        val addresses = Geocoder(context, Locale.getDefault())
-                            .getFromLocation(target.latitude, target.longitude, 1)
+                        val addresses = Geocoder(context, Locale.getDefault()).getFromLocation(target.latitude, target.longitude, 1)
                         if (!addresses.isNullOrEmpty()) {
                             val addr = addresses[0]
                             when {
-                                addr.featureName != null && !addr.featureName.matches(Regex("\\d+")) ->
-                                    "${addr.featureName}${if (addr.locality != null) ", ${addr.locality}" else ""}"
-                                addr.thoroughfare != null ->
-                                    "${addr.thoroughfare}${if (addr.locality != null) ", ${addr.locality}" else ""}"
+                                addr.featureName != null && !addr.featureName.matches(Regex("\\d+")) -> "${addr.featureName}${if (addr.locality != null) ", ${addr.locality}" else ""}"
+                                addr.thoroughfare != null -> "${addr.thoroughfare}${if (addr.locality != null) ", ${addr.locality}" else ""}"
                                 addr.locality != null -> addr.locality
                                 else -> null
                             }
@@ -654,41 +564,18 @@ fun CreatePlanScreen(
             }
         }
 
-        Dialog(
-            onDismissRequest = { showLocationPicker = false },
-            properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)
-        ) {
+        Dialog(onDismissRequest = { showLocationPicker = false }, properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)) {
             Box(modifier = Modifier.fillMaxSize()) {
                 GoogleMap(
                     modifier = Modifier.fillMaxSize(),
                     cameraPositionState = pickerCamera,
                     properties = MapProperties(isMyLocationEnabled = locationPermissionGranted),
-                    uiSettings = MapUiSettings(
-                        zoomControlsEnabled = false,
-                        myLocationButtonEnabled = locationPermissionGranted
-                    ),
-                    onMapClick = { latLng ->
-                        coroutineScope.launch {
-                            pickerCamera.animate(CameraUpdateFactory.newLatLng(latLng))
-                        }
-                    }
+                    uiSettings = MapUiSettings(zoomControlsEnabled = false, myLocationButtonEnabled = locationPermissionGranted),
+                    onMapClick = { latLng -> coroutineScope.launch { pickerCamera.animate(CameraUpdateFactory.newLatLng(latLng)) } }
                 ) {
-                    val target = pickerCamera.position.target
-                    Marker(
-                        state = rememberMarkerState(position = target),
-                        title = "Ubicación seleccionada"
-                    )
+                    Marker(state = rememberMarkerState(position = pickerCamera.position.target), title = "Ubicación seleccionada")
                 }
-
-                // Crosshair central
-                Icon(
-                    imageVector = Icons.Filled.LocationOn,
-                    contentDescription = null,
-                    tint = KddPurple,
-                    modifier = Modifier.size(40.dp).align(Alignment.Center).offset(y = (-20).dp)
-                )
-
-                // Panel inferior
+                Icon(imageVector = Icons.Filled.LocationOn, contentDescription = null, tint = KddPurple, modifier = Modifier.size(40.dp).align(Alignment.Center).offset(y = (-20).dp))
                 Card(
                     modifier = Modifier.fillMaxWidth().align(Alignment.BottomCenter).padding(12.dp),
                     shape = RoundedCornerShape(16.dp),
@@ -698,28 +585,17 @@ fun CreatePlanScreen(
                     Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                         Text("Arrastra el mapa para posicionar el marcador", style = MaterialTheme.typography.bodySmall, color = KddTextSecondary)
                         OutlinedTextField(
-                            value = tempNombre,
-                            onValueChange = { tempNombre = it },
+                            value = tempNombre, onValueChange = { tempNombre = it },
                             placeholder = { Text("Nombre del lugar (opcional)", color = KddTextHint) },
-                            modifier = Modifier.fillMaxWidth(),
-                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth(), singleLine = true,
                             shape = RoundedCornerShape(10.dp),
                             colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = KddPurple, unfocusedBorderColor = KddDivider)
                         )
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            OutlinedButton(
-                                onClick = { showLocationPicker = false },
-                                modifier = Modifier.weight(1f),
-                                shape = RoundedCornerShape(10.dp)
-                            ) { Text("Cancelar") }
+                            OutlinedButton(onClick = { showLocationPicker = false }, modifier = Modifier.weight(1f), shape = RoundedCornerShape(10.dp)) { Text("Cancelar") }
                             Button(
-                                onClick = {
-                                    selectedLatLng = pickerCamera.position.target
-                                    ubicacionNombre = tempNombre
-                                    showLocationPicker = false
-                                },
-                                modifier = Modifier.weight(1f),
-                                shape = RoundedCornerShape(10.dp),
+                                onClick = { selectedLatLng = pickerCamera.position.target; ubicacionNombre = tempNombre; showLocationPicker = false },
+                                modifier = Modifier.weight(1f), shape = RoundedCornerShape(10.dp),
                                 colors = ButtonDefaults.buttonColors(containerColor = KddPurple)
                             ) { Text("Confirmar", color = Color.White) }
                         }
@@ -729,7 +605,6 @@ fun CreatePlanScreen(
         }
     }
 
-    // ─── Dialog: Idiomas ───
     if (showIdiomasDialog) {
         var tempSeleccion by remember { mutableStateOf(idiomasSeleccionados) }
         Dialog(onDismissRequest = { showIdiomasDialog = false }) {
@@ -741,16 +616,13 @@ fun CreatePlanScreen(
                         items(EU_LANGUAGES) { idioma ->
                             Row(
                                 modifier = Modifier.fillMaxWidth().clickable {
-                                    tempSeleccion = if (tempSeleccion.contains(idioma))
-                                        tempSeleccion - idioma else tempSeleccion + idioma
+                                    tempSeleccion = if (tempSeleccion.contains(idioma)) tempSeleccion - idioma else tempSeleccion + idioma
                                 }.padding(vertical = 4.dp),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Checkbox(
                                     checked = tempSeleccion.contains(idioma),
-                                    onCheckedChange = {
-                                        tempSeleccion = if (it) tempSeleccion + idioma else tempSeleccion - idioma
-                                    },
+                                    onCheckedChange = { tempSeleccion = if (it) tempSeleccion + idioma else tempSeleccion - idioma },
                                     colors = CheckboxDefaults.colors(checkedColor = KddPurple)
                                 )
                                 Text(idioma, style = MaterialTheme.typography.bodyMedium, color = KddTextPrimary)
@@ -761,11 +633,7 @@ fun CreatePlanScreen(
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
                         TextButton(onClick = { showIdiomasDialog = false }) { Text("Cancelar", color = KddTextSecondary) }
                         Spacer(modifier = Modifier.width(8.dp))
-                        Button(
-                            onClick = { idiomasSeleccionados = tempSeleccion; showIdiomasDialog = false },
-                            colors = ButtonDefaults.buttonColors(containerColor = KddPurple),
-                            shape = RoundedCornerShape(10.dp)
-                        ) { Text("Aceptar") }
+                        Button(onClick = { idiomasSeleccionados = tempSeleccion; showIdiomasDialog = false }, colors = ButtonDefaults.buttonColors(containerColor = KddPurple), shape = RoundedCornerShape(10.dp)) { Text("Aceptar") }
                     }
                 }
             }
@@ -780,16 +648,10 @@ fun TimePickerDialogKdd(
     content: @Composable () -> Unit
 ) {
     Dialog(onDismissRequest = onDismiss) {
-        Card(
-            shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(containerColor = Color.White)
-        ) {
+        Card(shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
             Column(modifier = Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 content()
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.End
-                ) {
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
                     TextButton(onClick = onDismiss) { Text("Cancelar") }
                     TextButton(onClick = onConfirm) { Text("Aceptar", color = KddPurple) }
                 }
@@ -811,17 +673,13 @@ private fun FormField(
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Text(label, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, color = KddTextPrimary)
         OutlinedTextField(
-            value = value,
-            onValueChange = onValueChange,
+            value = value, onValueChange = onValueChange,
             placeholder = { Text(placeholder, color = KddTextHint) },
             singleLine = singleLine,
             minLines = if (singleLine) 1 else minLines,
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(10.dp),
-            colors = OutlinedTextFieldDefaults.colors(
-                focusedBorderColor = KddPurple,
-                unfocusedBorderColor = KddDivider
-            ),
+            colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = KddPurple, unfocusedBorderColor = KddDivider),
             supportingText = if (maxChars < Int.MAX_VALUE) {
                 { Text("${value.length}/$maxChars", style = MaterialTheme.typography.labelSmall, color = KddTextHint) }
             } else null
@@ -843,10 +701,8 @@ private fun SliderField(
         Text(label, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, color = KddTextPrimary)
         Text(sublabel, style = MaterialTheme.typography.bodySmall, color = KddTextSecondary)
         Slider(
-            value = value,
-            onValueChange = onValueChange,
-            valueRange = valueRange,
-            steps = steps,
+            value = value, onValueChange = onValueChange,
+            valueRange = valueRange, steps = steps,
             interactionSource = interactionSource,
             colors = SliderDefaults.colors(thumbColor = KddPurple, activeTrackColor = KddPurple)
         )

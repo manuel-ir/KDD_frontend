@@ -207,7 +207,6 @@ fun MainScreen(
                 onAccountClick = onNavigateToAccount
             )
 
-            // Aviso si el servidor no responde (el mapa sigue visible pero sin marcadores)
             if (planesState is PlanesState.Error) {
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
@@ -241,7 +240,6 @@ fun MainScreen(
                                 val icon = if (emoji != null) {
                                     remember(plan.categoria) { emojiABitmapDescriptor(emoji) }
                                 } else null
-
                                 Marker(
                                     state = rememberMarkerState(position = LatLng(lat, lng)),
                                     title = plan.titulo,
@@ -332,7 +330,6 @@ private fun AliasObligatorioDialog(
     onConfirmar: (String) -> Unit
 ) {
     var alias by remember { mutableStateOf("") }
-
     androidx.compose.ui.window.Dialog(
         onDismissRequest = { /* no se puede cerrar */ },
         properties = androidx.compose.ui.window.DialogProperties(
@@ -402,17 +399,14 @@ private fun EdadObligatoriaDialog(
     error: String?,
     onConfirmar: (String) -> Unit
 ) {
-    // Inicializar el selector con la fecha de hace 18 años
     val haceAños18 = LocalDate.now().minusYears(18)
     val millis18 = haceAños18.atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli()
     val datePickerState = rememberDatePickerState(
         initialSelectedDateMillis = millis18,
         yearRange = 1920..LocalDate.now().minusYears(13).year
     )
-
     var mostrarConfirmacion by remember { mutableStateOf(false) }
     var fechaPendiente by remember { mutableStateOf<String?>(null) }
-
     val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd")
     val fechaSeleccionada: String? = datePickerState.selectedDateMillis?.let { millis ->
         Instant.ofEpochMilli(millis).atZone(ZoneOffset.UTC).toLocalDate().format(formatter)
@@ -421,22 +415,14 @@ private fun EdadObligatoriaDialog(
         Instant.ofEpochMilli(millis).atZone(ZoneOffset.UTC).toLocalDate()
             .format(DateTimeFormatter.ofPattern("dd/MM/yyyy"))
     }
-
     if (mostrarConfirmacion && fechaPendiente != null) {
         AlertDialog(
             onDismissRequest = { mostrarConfirmacion = false },
             title = { Text("¿Seguro que es correcta?") },
-            text = {
-                Text(
-                    "Has seleccionado $fechaLegible.\n\nEsta fecha no podrá cambiarse después."
-                )
-            },
+            text = { Text("Has seleccionado $fechaLegible.\n\nEsta fecha no podrá cambiarse después.") },
             confirmButton = {
                 Button(
-                    onClick = {
-                        mostrarConfirmacion = false
-                        onConfirmar(fechaPendiente!!)
-                    },
+                    onClick = { mostrarConfirmacion = false; onConfirmar(fechaPendiente!!) },
                     colors = ButtonDefaults.buttonColors(containerColor = KddPurple),
                     enabled = !guardando
                 ) {
@@ -452,7 +438,6 @@ private fun EdadObligatoriaDialog(
             }
         )
     }
-
     DatePickerDialog(
         onDismissRequest = { /* No se puede cerrar */ },
         properties = DialogProperties(dismissOnBackPress = false, dismissOnClickOutside = false),
@@ -476,23 +461,11 @@ private fun EdadObligatoriaDialog(
             showModeToggle = true,
             title = {
                 Column(modifier = Modifier.padding(start = 24.dp, end = 24.dp, top = 16.dp)) {
-                    Text(
-                        "¿Cuándo naciste?",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Text(
-                        "Necesario para los límites de edad en los planes.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = KddTextSecondary
-                    )
+                    Text("¿Cuándo naciste?", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    Text("Necesario para los límites de edad en los planes.", style = MaterialTheme.typography.bodySmall, color = KddTextSecondary)
                     if (error != null) {
                         Spacer(Modifier.height(4.dp))
-                        Text(
-                            text = error,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.error
-                        )
+                        Text(text = error, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
                     }
                 }
             }
@@ -532,24 +505,12 @@ private fun KddTopAppBar(
                 fontWeight = FontWeight.Bold,
                 color = KddTextPrimary
             )
-
             Spacer(modifier = Modifier.weight(1f))
-
             IconButton(onClick = onChatsClick) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Outlined.Chat,
-                    contentDescription = "Chats",
-                    tint = KddTextPrimary
-                )
+                Icon(imageVector = Icons.AutoMirrored.Outlined.Chat, contentDescription = "Chats", tint = KddTextPrimary)
             }
-
             IconButton(onClick = onAccountClick) {
-                Box(
-                    modifier = Modifier
-                        .size(32.dp)
-                        .clip(CircleShape),
-                    contentAlignment = Alignment.Center
-                ) {
+                Box(modifier = Modifier.size(32.dp).clip(CircleShape), contentAlignment = Alignment.Center) {
                     if (!fotoPerfil.isNullOrBlank()) {
                         AsyncImage(
                             model = fotoPerfil,
