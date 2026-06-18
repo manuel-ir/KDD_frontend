@@ -451,7 +451,12 @@ fun CreatePlanScreen(
     if (showTimeDesdeDialog) {
         val timeState = rememberTimePickerState(initialHour = 12, initialMinute = 0, is24Hour = true)
         TimePickerDialogKdd(onDismiss = { showTimeDesdeDialog = false }, onConfirm = {
-            horaDesde = LocalTime.of(timeState.hour, timeState.minute)
+            val candidata = LocalTime.of(timeState.hour, timeState.minute)
+            if (fechaDesde == LocalDate.now() && !candidata.isAfter(LocalTime.now())) {
+                errorMsg = "La hora de inicio debe ser posterior a la hora actual"
+            } else {
+                horaDesde = candidata
+            }
             showTimeDesdeDialog = false
         }) { TimePicker(state = timeState) }
     }
@@ -481,10 +486,13 @@ fun CreatePlanScreen(
         val timeState = rememberTimePickerState(initialHour = 12, initialMinute = 0, is24Hour = true)
         TimePickerDialogKdd(onDismiss = { showTimeHastaDialog = false }, onConfirm = {
             val candidata = LocalTime.of(timeState.hour, timeState.minute)
-            if (fechaHasta != null && fechaDesde != null && fechaHasta == fechaDesde && horaDesde != null && !candidata.isAfter(horaDesde)) {
-                errorMsg = "La hora de fin debe ser posterior a la hora de inicio"
-            } else {
-                horaHasta = candidata
+            val fechaEfectiva = fechaHasta ?: fechaDesde
+            when {
+                fechaEfectiva == LocalDate.now() && !candidata.isAfter(LocalTime.now()) ->
+                    errorMsg = "La hora de fin debe ser posterior a la hora actual"
+                (fechaHasta == null || fechaHasta == fechaDesde) && horaDesde != null && !candidata.isAfter(horaDesde) ->
+                    errorMsg = "La hora de fin debe ser posterior a la hora de inicio"
+                else -> horaHasta = candidata
             }
             showTimeHastaDialog = false
         }) { TimePicker(state = timeState) }

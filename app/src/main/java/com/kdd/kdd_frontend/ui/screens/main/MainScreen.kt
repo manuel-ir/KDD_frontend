@@ -227,7 +227,7 @@ fun MainScreen(
                     cameraPositionState = cameraPositionState,
                     properties = MapProperties(isMyLocationEnabled = locationPermissionGranted),
                     uiSettings = MapUiSettings(
-                        zoomControlsEnabled = true,
+                        zoomControlsEnabled = false,
                         myLocationButtonEnabled = false
                     )
                 ) {
