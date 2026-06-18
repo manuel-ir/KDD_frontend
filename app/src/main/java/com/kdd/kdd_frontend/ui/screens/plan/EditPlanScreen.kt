@@ -579,9 +579,11 @@ fun EditPlanScreen(
         }
 
         // Determinar punto de inicio del mapa
-        var initialPosition by remember {
-            mutableStateOf(selectedLatLng ?: LatLng(40.4168, -3.7038))
+        val initialPosition = remember { selectedLatLng ?: LatLng(40.4168, -3.7038) }
+        val pickerCamera = rememberCameraPositionState {
+            position = CameraPosition.fromLatLngZoom(initialPosition, 14f)
         }
+        var tempNombre by remember { mutableStateOf(ubicacionNombre) }
 
         LaunchedEffect(Unit) {
             if (selectedLatLng == null && locationPermissionGranted) {
@@ -589,16 +591,11 @@ fun EditPlanScreen(
                     val fusedLocation = LocationServices.getFusedLocationProviderClient(context)
                     val location = fusedLocation.lastLocation.await()
                     if (location != null) {
-                        initialPosition = LatLng(location.latitude, location.longitude)
+                        pickerCamera.animate(CameraUpdateFactory.newLatLngZoom(LatLng(location.latitude, location.longitude), 14f))
                     }
                 } catch (_: Exception) { }
             }
         }
-
-        val pickerCamera = rememberCameraPositionState {
-            position = CameraPosition.fromLatLngZoom(initialPosition, 14f)
-        }
-        var tempNombre by remember { mutableStateOf(ubicacionNombre) }
 
         LaunchedEffect(pickerCamera.isMoving) {
             if (!pickerCamera.isMoving) {

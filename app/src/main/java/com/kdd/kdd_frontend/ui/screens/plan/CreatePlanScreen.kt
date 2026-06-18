@@ -529,18 +529,21 @@ fun CreatePlanScreen(
         val permissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { }
         LaunchedEffect(Unit) { if (!locationPermissionGranted) permissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION) }
 
-        var initialMapPosition by remember { mutableStateOf(selectedLatLng ?: LatLng(40.4168, -3.7038)) }
+        val initialMapPosition = remember { selectedLatLng ?: LatLng(40.4168, -3.7038) }
+        val pickerCamera = rememberCameraPositionState { position = CameraPosition.fromLatLngZoom(initialMapPosition, 14f) }
+        var tempNombre by remember { mutableStateOf(ubicacionNombre) }
+
         LaunchedEffect(Unit) {
             if (selectedLatLng == null && locationPermissionGranted) {
                 try {
                     val fusedLocation = LocationServices.getFusedLocationProviderClient(context)
                     val location = fusedLocation.lastLocation.await()
-                    if (location != null) initialMapPosition = LatLng(location.latitude, location.longitude)
+                    if (location != null) {
+                        pickerCamera.animate(CameraUpdateFactory.newLatLngZoom(LatLng(location.latitude, location.longitude), 14f))
+                    }
                 } catch (_: Exception) { }
             }
         }
-        val pickerCamera = rememberCameraPositionState { position = CameraPosition.fromLatLngZoom(initialMapPosition, 14f) }
-        var tempNombre by remember { mutableStateOf(ubicacionNombre) }
 
         LaunchedEffect(pickerCamera.isMoving) {
             if (!pickerCamera.isMoving) {
