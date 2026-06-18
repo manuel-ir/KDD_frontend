@@ -17,6 +17,10 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
+import java.time.LocalDate
+import java.time.LocalDateTime
+import java.time.LocalTime
+import java.time.format.DateTimeFormatter
 
 /**
  * ViewModel de planes.
@@ -204,12 +208,26 @@ class PlanViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    private fun planHaCaducado(plan: PlanCardData): Boolean {
+        val fmt = DateTimeFormatter.ofPattern("yyyy-MM-dd")
+        val timeFmt = DateTimeFormatter.ofPattern("HH:mm")
+        val fecha = runCatching { LocalDate.parse(plan.dia, fmt) }.getOrNull() ?: return false
+        val ahora = LocalDateTime.now()
+        val horaFin = plan.horaHasta?.let { runCatching { LocalTime.parse(it.take(5), timeFmt) }.getOrNull() }
+        val horaIni = plan.hora.takeIf { it.isNotBlank() }
+            ?.let { runCatching { LocalTime.parse(it.take(5), timeFmt) }.getOrNull() }
+        return if (horaFin != null) {
+            ahora.isAfter(LocalDateTime.of(fecha, horaFin))
+        } else {
+            ahora.isAfter(LocalDateTime.of(fecha, horaIni ?: LocalTime.MIDNIGHT).plusHours(24))
+        }
+    }
+
     private fun aplicarFiltrosLocales(planes: List<PlanCardData> = _todosLosPlanes.value): List<PlanCardData> {
         val cat = _filtroCategoria.value
         val fecha = _filtroFecha.value
-        val eMin = _filtroEdadMin.value
-        val eMax = _filtroEdadMax.value
         return planes.filter { plan ->
+            if (planHaCaducado(plan)) return@filter false
             val pasaCategoria = cat.isBlank() || plan.categoria.equals(cat, ignoreCase = true)
             val pasaFecha = fecha == null || plan.dia == fecha
             pasaCategoria && pasaFecha
